@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="lemonfiber small-size mark">
+  <title>lemonfiber small-size mark</title>
+  <circle cx="100" cy="100" r="80" fill="#F0C419"></circle>
+  <circle cx="100" cy="100" r="66" fill="#FBF6E7"></circle>
+  <g fill="#F0C419" stroke="#17160F" stroke-width="4">
+    <path d="M100,100 C112,86 117,66 113,48 C107,42 93,42 87,48 C83,66 88,86 100,100 Z" transform="rotate(0 100 100)"></path>
+    <path d="M100,100 C112,86 117,66 113,48 C107,42 93,42 87,48 C83,66 88,86 100,100 Z" transform="rotate(90 100 100)"></path>
+    <path d="M100,100 C112,86 117,66 113,48 C107,42 93,42 87,48 C83,66 88,86 100,100 Z" transform="rotate(180 100 100)"></path>
+    <path d="M100,100 C112,86 117,66 113,48 C107,42 93,42 87,48 C83,66 88,86 100,100 Z" transform="rotate(270 100 100)"></path>
+  </g>
+  <g stroke="#17160F" stroke-width="10" stroke-linecap="round" fill="none">
+    <path d="M100,100 L100,38" transform="rotate(45 100 100)"></path>
+    <path d="M100,100 L100,38" transform="rotate(135 100 100)"></path>
+    <path d="M100,100 L100,38" transform="rotate(225 100 100)"></path>
+    <path d="M100,100 L100,38" transform="rotate(315 100 100)"></path>
+  </g>
+  <g stroke="#E07A17" stroke-width="3.4" stroke-linecap="round" fill="none">
+    <path d="M100,100 L100,40" transform="rotate(45 100 100)"></path>
+    <path d="M100,100 L100,40" transform="rotate(135 100 100)"></path>
+    <path d="M100,100 L100,40" transform="rotate(225 100 100)"></path>
+    <path d="M100,100 L100,40" transform="rotate(315 100 100)"></path>
+  </g>
+  <circle cx="100" cy="100" r="18" fill="#17160F"></circle>
+  <circle cx="100" cy="100" r="7" fill="#F0C419"></circle>
+</svg>

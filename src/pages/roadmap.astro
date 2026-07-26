@@ -1,0 +1,308 @@
+---
+import Base from "../layouts/Base.astro";
+import ProgressBar from "../components/ProgressBar.astro";
+import StatusPill from "../components/StatusPill.astro";
+import { getSiteData } from "../lib/github";
+import { site } from "../data/site";
+import { statusGlyph } from "../lib/format";
+
+const data = await getSiteData();
+---
+
+<Base
+  active="roadmap"
+  stars={data.stars}
+  title="Roadmap"
+  description="Sequenced milestones, live from the spec and implementation status — no hand-editing."
+>
+  <section class="section head">
+    <div class="container">
+      <p class="eyebrow">The roadmap</p>
+      <h1 class="head__h">Build the thing being wrapped, before the wrapper.</h1>
+      <p class="lead head__lead">
+        Every milestone is sequenced to keep a working artifact at each step.
+        Status here is derived from
+        <a href={`${site.githubOrg}/lemonfiber/blob/main/IMPLEMENTATION-STATUS.md`} target="_blank" rel="noopener">IMPLEMENTATION-STATUS.md</a>
+        — when the code moves, this page moves.
+      </p>
+      <div class="head__bar card">
+        <div class="head__bar-top">
+          <span class="head__bar-label">Overall</span>
+          <span class="head__bar-n">
+            {data.progress.doneMilestones}/{data.progress.totalMilestones} milestones ·
+            {data.progress.doneDeliverables}/{data.progress.totalDeliverables} deliverables
+          </span>
+        </div>
+        <ProgressBar pct={data.progress.pct} status="partial" />
+      </div>
+    </div>
+  </section>
+
+  <section class="section timeline-sec">
+    <div class="container">
+      <ol class="tl">
+        {
+          data.milestones.map((m) => (
+            <li class:list={["tl__item", `is-${m.status}`]} id={m.id}>
+              <div class="tl__rail">
+                <span class="tl__node" aria-hidden="true">{statusGlyph(m.status)}</span>
+              </div>
+              <article class="tl__card card">
+                <header class="tl__head">
+                  <div class="tl__title">
+                    <span class="tl__id">{m.id}</span>
+                    <h2 class="tl__name">{m.title}</h2>
+                  </div>
+                  <StatusPill status={m.status} />
+                </header>
+                <p class="tl__blurb">{m.blurb}</p>
+                <div class="tl__progress">
+                  <ProgressBar pct={m.pct} status={m.status} size="sm" />
+                  <span class="tl__repo">
+                    {m.repo && <a href={`${site.githubOrg}/${m.repo}`} target="_blank" rel="noopener">{m.repo}</a>}
+                  </span>
+                </div>
+                <ul class="tl__dels">
+                  {m.deliverables.map((d) => (
+                    <li class:list={["del", `del--${d.status}`]}>
+                      <span class="del__glyph" aria-hidden="true">{statusGlyph(d.status)}</span>
+                      <span class="del__title">{d.title}</span>
+                      {d.spec && <span class="del__spec mono">{d.spec}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container foot-note card">
+      <p>
+        Want the full argument behind each decision?
+        <a href={site.roadmapUrl} target="_blank" rel="noopener">The canonical roadmap</a>
+        and the <a href={site.specUrl} target="_blank" rel="noopener">795-requirement spec</a>
+        spell out the <em>why</em> for every one.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .head {
+    padding-bottom: var(--space-6);
+  }
+  .head__h {
+    font-size: var(--size-display-xl);
+    margin-top: var(--space-3);
+    max-width: 20ch;
+  }
+  .head__lead {
+    margin-top: var(--space-5);
+    max-width: 62ch;
+  }
+  .head__lead a {
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .head__bar {
+    margin-top: var(--space-6);
+    padding: var(--space-5);
+  }
+  .head__bar-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .head__bar-label {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: var(--tracking-tight);
+  }
+  .head__bar-n {
+    font-size: var(--size-caption);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .timeline-sec {
+    padding-top: 0;
+  }
+  .tl {
+    list-style: none;
+    display: grid;
+    gap: var(--space-5);
+  }
+  .tl__item {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: var(--space-3);
+    scroll-margin-top: calc(var(--nav-h) + var(--space-5));
+  }
+  .tl__rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: var(--space-5);
+  }
+  .tl__node {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 0.9rem;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    z-index: 1;
+  }
+  .is-done .tl__node {
+    color: var(--ok);
+    border-color: var(--ok);
+    background: var(--ok-bg);
+  }
+  .is-partial .tl__node {
+    color: var(--accent-strong);
+    border-color: var(--accent);
+    background: var(--wip-bg);
+  }
+  .tl__rail::after {
+    content: "";
+    flex: 1;
+    width: 2px;
+    background: var(--border);
+    margin-top: 4px;
+  }
+  .tl__item:last-child .tl__rail::after {
+    display: none;
+  }
+
+  .tl__card {
+    padding: var(--space-5);
+  }
+  .tl__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .tl__title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+  .tl__id {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--accent-strong);
+    background: var(--wip-bg);
+    padding: 0.15em 0.55em;
+    border-radius: var(--radius-sm);
+  }
+  .tl__name {
+    font-size: var(--size-display-m);
+    letter-spacing: var(--tracking-tight);
+  }
+  .tl__blurb {
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+  }
+  .tl__progress {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+  }
+  .tl__repo a {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    border: 1px solid var(--border-soft);
+    padding: 0.15em 0.5em;
+    border-radius: var(--radius-sm);
+  }
+  .tl__repo a:hover {
+    color: var(--accent-strong);
+    border-color: var(--accent);
+  }
+  .tl__dels {
+    list-style: none;
+    display: grid;
+    gap: 0.1rem;
+    margin-top: var(--space-4);
+    border-top: 1px dashed var(--border);
+    padding-top: var(--space-4);
+  }
+  .del {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.3rem 0.35rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+  }
+  .del:hover {
+    background: var(--surface-2);
+  }
+  .del__glyph {
+    font-size: 0.72rem;
+  }
+  .del--done .del__glyph {
+    color: var(--ok);
+  }
+  .del--partial .del__glyph {
+    color: var(--accent-strong);
+  }
+  .del--todo .del__glyph {
+    color: var(--todo);
+  }
+  .del--todo .del__title {
+    color: var(--text-muted);
+  }
+  .del__spec {
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    border: 1px solid var(--border-soft);
+    padding: 0.05em 0.4em;
+    border-radius: var(--radius-sm);
+  }
+  .foot-note {
+    padding: var(--space-5);
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--bg-tint);
+  }
+  .foot-note a {
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .tl__item {
+      grid-template-columns: 26px 1fr;
+    }
+    .tl__node {
+      width: 26px;
+      height: 26px;
+      font-size: 0.7rem;
+    }
+    .del {
+      grid-template-columns: auto 1fr;
+    }
+    .del__spec {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,282 @@
+---
+import Base from "../layouts/Base.astro";
+import { getSiteData } from "../lib/github";
+import { site, helpWays } from "../data/site";
+import { relativeTime } from "../lib/format";
+
+const data = await getSiteData();
+const gfi = data.goodFirstIssues;
+---
+
+<Base
+  active="contribute"
+  stars={data.stars}
+  title="Contribute"
+  description="You don't need to write code — or even be especially technical — to help lemonfiber."
+>
+  <section class="section head">
+    <div class="container">
+      <p class="eyebrow">Want to help?</p>
+      <h1 class="head__h">You don't need to write code.</h1>
+      <p class="lead head__lead">
+        Lemonfiber is young and built in the open. There are real, useful ways to
+        help whatever your background — and the specification is complete, so the
+        path from “interested” to “merged” is unusually clear.
+      </p>
+      <div class="head__cta">
+        <a class="btn btn--primary" href={site.discord} target="_blank" rel="noopener">Join the Discord</a>
+        <a class="btn btn--ghost" href={`${site.specUrl}/blob/main/50-governance/contributing.md`} target="_blank" rel="noopener">Contributing guide</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="ways">
+        {
+          helpWays.map((w) => (
+            <article class="way card">
+              <span class="way__emoji" aria-hidden="true">{w.emoji}</span>
+              <div>
+                <h3 class="way__title">{w.title}</h3>
+                <p class="way__body">{w.body}</p>
+              </div>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section gfi-sec">
+    <div class="container">
+      <div class="gfi__head">
+        <div>
+          <p class="eyebrow">Prefer to write code?</p>
+          <h2 class="sec__h">Good first issues, live from the org.</h2>
+        </div>
+        <a class="gfi__all" href="https://github.com/search?q=org%3Alemonfiber+label%3A%22good+first+issue%22+state%3Aopen&type=issues" target="_blank" rel="noopener">
+          View all on GitHub →
+        </a>
+      </div>
+
+      {
+        gfi.length > 0 ? (
+          <ul class="gfi">
+            {gfi.map((i) => (
+              <li>
+                <a class="gfi__item" href={i.url} target="_blank" rel="noopener">
+                  <div class="gfi__main">
+                    <span class="gfi__repo mono">{i.repo}</span>
+                    <span class="gfi__title">{i.title}</span>
+                  </div>
+                  <div class="gfi__meta">
+                    <span class="gfi__num mono">#{i.number}</span>
+                    <span class="gfi__when">{relativeTime(i.createdAt)}</span>
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div class="gfi__empty card">
+            <p>
+              <b>No open “good first issue” right now</b> — either they've all been
+              claimed, or the build couldn't reach GitHub. Hop into the
+              <a href={site.discord} target="_blank" rel="noopener"> Discord</a> and
+              we'll point you at something, or browse
+              <a href={`${site.githubOrg}/lemonfiber/issues`} target="_blank" rel="noopener"> all open issues</a>.
+            </p>
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container start card">
+      <div>
+        <h2 class="start__h">Before your first PR</h2>
+        <p class="start__p">
+          Read <code>AGENTS.md</code> in the repo you're touching and the
+          contributing guide. Every change cites a spec identifier that already
+          exists — commits carry a <code>Spec:</code> trailer, and CI checks it.
+          It sounds strict; it's what keeps the project coherent.
+        </p>
+      </div>
+      <div class="start__links">
+        <a class="btn btn--ghost" href={site.specUrl} target="_blank" rel="noopener">The spec</a>
+        <a class="btn btn--ghost" href={`${site.githubOrg}/.github/blob/main/CODE_OF_CONDUCT.md`} target="_blank" rel="noopener">Code of Conduct</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .head__h {
+    font-size: var(--size-display-xl);
+    margin-top: var(--space-3);
+    max-width: 16ch;
+  }
+  .head__lead {
+    margin-top: var(--space-5);
+    max-width: 58ch;
+  }
+  .head__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+
+  .ways {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+  }
+  .way {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    align-items: start;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+  }
+  .way:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+  }
+  .way__emoji {
+    font-size: 1.6rem;
+    line-height: 1;
+  }
+  .way__title {
+    font-size: 1.2rem;
+    letter-spacing: var(--tracking-tight);
+  }
+  .way__body {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font-size: 0.92rem;
+  }
+
+  .sec__h {
+    font-size: var(--size-display-l);
+  }
+  .gfi__head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+  }
+  .gfi__all {
+    font-weight: 700;
+    color: var(--accent-strong);
+    white-space: nowrap;
+  }
+  .gfi__all:hover {
+    text-decoration: underline;
+  }
+  .gfi {
+    list-style: none;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .gfi__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: border-color 0.14s ease, transform 0.14s ease;
+  }
+  .gfi__item:hover {
+    border-color: var(--accent);
+    transform: translateX(3px);
+  }
+  .gfi__main {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .gfi__repo {
+    font-size: 0.75rem;
+    color: var(--accent-strong);
+    background: var(--wip-bg);
+    padding: 0.12em 0.5em;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+  .gfi__title {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .gfi__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    white-space: nowrap;
+  }
+  .gfi__num {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+  }
+  .gfi__when {
+    font-size: 0.78rem;
+    color: var(--text-faint);
+  }
+  .gfi__empty {
+    padding: var(--space-6);
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .gfi__empty a {
+    color: var(--accent-strong);
+    text-decoration: underline;
+  }
+
+  .start {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--space-6);
+    padding: var(--space-6);
+    background: var(--bg-tint);
+  }
+  .start__h {
+    font-size: var(--size-display-m);
+  }
+  .start__p {
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    max-width: 60ch;
+  }
+  .start__links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  @media (max-width: 760px) {
+    .ways {
+      grid-template-columns: 1fr;
+    }
+    .start {
+      grid-template-columns: 1fr;
+    }
+    .start__links {
+      flex-direction: row;
+    }
+    .gfi__meta .gfi__when {
+      display: none;
+    }
+  }
+</style>

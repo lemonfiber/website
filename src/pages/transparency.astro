@@ -1,0 +1,266 @@
+---
+import Base from "../layouts/Base.astro";
+import RepoCard from "../components/RepoCard.astro";
+import ProgressBar from "../components/ProgressBar.astro";
+import { getSiteData } from "../lib/github";
+import { site } from "../data/site";
+import { relativeTime, compact } from "../lib/format";
+
+const data = await getSiteData();
+const primary = data.repos.filter((r) => r.primary);
+const secondary = data.repos.filter((r) => !r.primary);
+---
+
+<Base
+  active="transparency"
+  stars={data.stars}
+  title="Transparency"
+  description="Every repo, release and open issue in the lemonfiber org — read live from GitHub, never edited by hand."
+>
+  <section class="section head">
+    <div class="container">
+      <p class="eyebrow">Build in the open</p>
+      <h1 class="head__h">Nothing here is written by a human.</h1>
+      <p class="lead head__lead">
+        This whole page is generated from the {site.name} org at build time — repos,
+        releases, open issues, deliverable counts. If the repos change, so does
+        this page, with zero maintenance.
+        <span class:list={["freshness", { "is-stale": !data.live }]}>
+          {data.live ? "● Live at last build" : "○ Last known snapshot"}
+        </span>
+      </p>
+
+      <div class="kpis">
+        <div class="kpi card">
+          <span class="kpi__n">{data.progress.pct}%</span>
+          <span class="kpi__l">deliverables shipped</span>
+          <div class="kpi__bar"><ProgressBar pct={data.progress.pct} status="partial" size="sm" /></div>
+        </div>
+        <div class="kpi card">
+          <span class="kpi__n">{data.repos.length}</span>
+          <span class="kpi__l">public repositories</span>
+        </div>
+        <div class="kpi card">
+          <span class="kpi__n">{compact(data.stars)}</span>
+          <span class="kpi__l">GitHub stars</span>
+        </div>
+        <div class="kpi card">
+          <span class="kpi__n">{data.progress.doneMilestones}/{data.progress.totalMilestones}</span>
+          <span class="kpi__l">milestones complete</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section repos-sec">
+    <div class="container">
+      <h2 class="sec__h">The repositories</h2>
+      <p class="sec__sub">Each one governed by the spec — no change lands without citing an identifier.</p>
+      <div class="repos repos--primary">
+        {primary.map((r) => <RepoCard repo={r} />)}
+      </div>
+      <div class="repos repos--secondary">
+        {secondary.map((r) => <RepoCard repo={r} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section split">
+    <div class="container split__grid">
+      <div>
+        <h2 class="sec__h">Latest releases</h2>
+        {
+          data.releases.length > 0 ? (
+            <ul class="rel">
+              {data.releases.map((r) => (
+                <li class="rel__item">
+                  <a href={r.url} target="_blank" rel="noopener">
+                    <span class="rel__repo">{r.repo}</span>
+                    <span class="rel__tag mono">{r.tag}</span>
+                    <span class="rel__when">{relativeTime(r.publishedAt)}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="empty card">
+              No tagged releases yet — the binary is source-only until the release
+              milestone (M6). Follow along on the <a href="/roadmap">roadmap</a>.
+            </p>
+          )
+        }
+      </div>
+
+      <div>
+        <h2 class="sec__h">How this stays honest</h2>
+        <ul class="honest">
+          <li><b>Spec-first.</b> Every commit cites a spec identifier; CI rejects the ones that don't.</li>
+          <li><b>Governed change.</b> Reusable workflows enforce DCO, hygiene and security across all repos.</li>
+          <li><b>Proven, not claimed.</b> The binary tests hardlinks and VPN isolation instead of assuming them.</li>
+          <li><b>This page.</b> Built from the org, so it can't quietly drift from reality.</li>
+        </ul>
+        <a class="btn btn--ghost" href={site.githubOrg} target="_blank" rel="noopener">Browse the org on GitHub →</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .head__h {
+    font-size: var(--size-display-xl);
+    margin-top: var(--space-3);
+    max-width: 18ch;
+  }
+  .head__lead {
+    margin-top: var(--space-5);
+    max-width: 60ch;
+  }
+  .freshness {
+    display: inline-block;
+    margin-left: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ok);
+    font-family: var(--font-mono);
+  }
+  .freshness.is-stale {
+    color: var(--text-faint);
+  }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+  }
+  .kpi {
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .kpi__n {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 2.4rem;
+    letter-spacing: var(--tracking-tight);
+    color: var(--accent-strong);
+    line-height: 1;
+  }
+  .kpi__l {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .kpi__bar {
+    margin-top: var(--space-2);
+  }
+
+  .sec__h {
+    font-size: var(--size-display-l);
+  }
+  .sec__sub {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    margin-bottom: var(--space-6);
+  }
+  .repos {
+    display: grid;
+    gap: var(--space-4);
+  }
+  .repos--primary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .repos--secondary {
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: var(--space-4);
+  }
+
+  .split__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-8);
+  }
+  .rel {
+    list-style: none;
+    display: grid;
+    gap: 0.4rem;
+    margin-top: var(--space-5);
+  }
+  .rel__item a {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: border-color 0.14s ease;
+  }
+  .rel__item a:hover {
+    border-color: var(--accent);
+  }
+  .rel__repo {
+    font-weight: 700;
+  }
+  .rel__tag {
+    color: var(--accent-strong);
+    font-size: 0.85rem;
+  }
+  .rel__when {
+    color: var(--text-faint);
+    font-size: 0.8rem;
+  }
+  .empty {
+    margin-top: var(--space-5);
+    padding: var(--space-5);
+    color: var(--text-muted);
+  }
+  .empty a {
+    color: var(--accent-strong);
+    text-decoration: underline;
+  }
+  .honest {
+    list-style: none;
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+  .honest li {
+    padding-left: 1.4rem;
+    position: relative;
+    color: var(--text-muted);
+  }
+  .honest li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 800;
+  }
+  .honest b {
+    color: var(--text);
+  }
+
+  @media (max-width: 900px) {
+    .kpis,
+    .repos--primary,
+    .repos--secondary {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .split__grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-6);
+    }
+  }
+  @media (max-width: 560px) {
+    .kpis,
+    .repos--primary,
+    .repos--secondary {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,10 @@
+# Local hooks mirroring CI. Kept fast — the full production build (which fetches
+# from the GitHub API) is left to CI so a commit never depends on the network.
+pre-commit:
+  parallel: true
+  commands:
+    typos:
+      run: typos
+    astro-check:
+      glob: "{src/**/*,*.{ts,mjs,json},astro.config.mjs}"
+      run: npm run check

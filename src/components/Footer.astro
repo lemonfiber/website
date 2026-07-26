@@ -1,0 +1,184 @@
+---
+import { site } from "../data/site";
+
+const cols = [
+  {
+    title: "Project",
+    links: [
+      { label: "Home", href: "/" },
+      { label: "Roadmap", href: "/roadmap" },
+      { label: "Transparency", href: "/transparency" },
+      { label: "Contribute", href: "/contribute" },
+    ],
+  },
+  {
+    title: "Source",
+    links: [
+      { label: "Specification", href: site.specUrl },
+      { label: "lemonfiber (binary)", href: "https://github.com/lemonfiber/lemonfiber" },
+      { label: "media-stack", href: "https://github.com/lemonfiber/media-stack" },
+      { label: "All repos", href: site.githubOrg },
+    ],
+  },
+  {
+    title: "Community",
+    links: [
+      { label: "Discord", href: site.discord },
+      { label: "Good first issues", href: "https://github.com/lemonfiber/lemonfiber/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22" },
+      { label: "Code of Conduct", href: "https://github.com/lemonfiber/.github/blob/main/CODE_OF_CONDUCT.md" },
+      { label: "Security", href: "https://github.com/lemonfiber/.github/blob/main/SECURITY.md" },
+    ],
+  },
+];
+---
+
+<footer class="ft">
+  <div class="container ft__inner">
+    <div class="ft__brand">
+      <a href="/" class="ft__logo" aria-label="lemonfiber home">
+        <img src="/brand/mark-small.svg" alt="" width="40" height="40" />
+        <span>lemonfiber</span>
+      </a>
+      <p class="ft__tag">{site.tagline}.</p>
+      <p class="ft__lic">
+        <a href={site.licenseUrl} target="_blank" rel="noopener">{site.license}</a> —
+        ethical, source-available. © {new Date().getFullYear()} {site.by.name}.
+      </p>
+    </div>
+
+    <nav class="ft__cols" aria-label="Footer">
+      {
+        cols.map((col) => (
+          <div class="ft__col">
+            <h5>{col.title}</h5>
+            <ul>
+              {col.links.map((l) => (
+                <li>
+                  <a href={l.href} target={l.href.startsWith("http") ? "_blank" : undefined} rel="noopener">
+                    {l.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </nav>
+  </div>
+
+  <div class="container ft__base">
+    <span class="ft__built">Built in the open — this page is generated from the org's repos.</span>
+    <a class="ft__nw" href={site.by.url} target="_blank" rel="noopener" aria-label="NightWorks.io">
+      <img class="nw-dark" src="/brand/nightworks-dark.png" alt="NightWorks.io" height="18" />
+      <img class="nw-white" src="/brand/nightworks-white.png" alt="NightWorks.io" height="18" />
+    </a>
+  </div>
+</footer>
+
+<style>
+  .ft {
+    margin-top: var(--space-9);
+    border-top: 1px solid var(--border);
+    background: var(--bg-tint);
+    padding-block: var(--space-8) var(--space-5);
+  }
+  .ft__inner {
+    display: grid;
+    grid-template-columns: 1.4fr 2fr;
+    gap: var(--space-8);
+  }
+  .ft__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: var(--tracking-display);
+  }
+  .ft__tag {
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    max-width: 34ch;
+  }
+  .ft__lic {
+    margin-top: var(--space-4);
+    font-size: var(--size-caption);
+    color: var(--text-faint);
+  }
+  .ft__lic a {
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .ft__cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-5);
+  }
+  .ft__col h5 {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--text-faint);
+    margin-bottom: var(--space-3);
+  }
+  .ft__col ul {
+    list-style: none;
+    display: grid;
+    gap: var(--space-2);
+  }
+  .ft__col a {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+  }
+  .ft__col a:hover {
+    color: var(--accent-strong);
+  }
+  .ft__base {
+    margin-top: var(--space-8);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+  .ft__built {
+    font-size: var(--size-caption);
+    color: var(--text-faint);
+  }
+  .nw-white {
+    display: none;
+  }
+  :root[data-theme="ink"] .nw-dark {
+    display: none;
+  }
+  :root[data-theme="ink"] .nw-white {
+    display: block;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="paper"]) .nw-dark {
+      display: none;
+    }
+    :root:not([data-theme="paper"]) .nw-white {
+      display: block;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .ft__inner {
+      grid-template-columns: 1fr;
+      gap: var(--space-6);
+    }
+    .ft__cols {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .ft__base {
+      flex-direction: column-reverse;
+      align-items: flex-start;
+      gap: var(--space-3);
+    }
+  }
+</style>

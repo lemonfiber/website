@@ -1,0 +1,62 @@
+---
+import Base from "../layouts/Base.astro";
+import Console from "../components/Console.astro";
+---
+
+<Base title="Not found" description="That page isn't in the manifest.">
+  <section class="section nf">
+    <div class="container nf__inner">
+      <p class="eyebrow">404</p>
+      <h1 class="nf__h">That page isn't in the manifest.</h1>
+      <p class="lead nf__lead">
+        No service by that name — but the stack is still healthy. Try one of these.
+      </p>
+      <div class="nf__demo">
+        <Console
+          title="zsh — lemonfiber"
+          lines={[
+            `<span class="c-prompt">$</span> <span class="c-cmd">lemonfiber up</span> <span class="c-flag">that-page</span>`,
+            `<span class="c-warn">  !</span> Unknown form <span class="c-dim">· not found in stack.toml</span>`,
+            `<span class="c-dim">  Known routes: home · roadmap · transparency · contribute</span>`,
+          ]}
+        />
+      </div>
+      <div class="nf__cta">
+        <a class="btn btn--primary" href="/">Back home</a>
+        <a class="btn btn--ghost" href="/roadmap">Roadmap</a>
+        <a class="btn btn--ghost" href="/transparency">Transparency</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .nf {
+    min-height: 60vh;
+    display: grid;
+    place-items: center;
+  }
+  .nf__inner {
+    max-width: 640px;
+    text-align: center;
+  }
+  .nf__h {
+    font-size: var(--size-display-xl);
+    margin-top: var(--space-3);
+  }
+  .nf__lead {
+    margin-inline: auto;
+    margin-top: var(--space-4);
+  }
+  .nf__demo {
+    margin-top: var(--space-6);
+    text-align: left;
+  }
+  .nf__cta {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    margin-top: var(--space-6);
+    flex-wrap: wrap;
+  }
+</style>

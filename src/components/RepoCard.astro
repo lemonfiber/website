@@ -1,0 +1,125 @@
+---
+import type { Repo } from "../lib/types";
+import { compact, relativeTime } from "../lib/format";
+
+interface Props {
+  repo: Repo;
+}
+const { repo } = Astro.props;
+const langColor: Record<string, string> = {
+  Rust: "#dea584",
+  Ruby: "#701516",
+  Astro: "#ff5d01",
+  CSS: "#563d7c",
+  Shell: "#89e051",
+  Markdown: "#083fa1",
+  TypeScript: "#3178c6",
+  HTML: "#e34c26",
+};
+---
+
+<a class:list={["rc", { "rc--primary": repo.primary }]} href={repo.url} target="_blank" rel="noopener">
+  <div class="rc__top">
+    <h4 class="rc__name">{repo.name}</h4>
+    <span class="rc__role">{repo.role}</span>
+  </div>
+  <p class="rc__desc">{repo.description}</p>
+  <div class="rc__meta">
+    {
+      repo.language && (
+        <span class="rc__lang">
+          <span class="rc__dot" style={`background:${langColor[repo.language] ?? "#999"}`}></span>
+          {repo.language}
+        </span>
+      )
+    }
+    {repo.latestRelease && <span class="rc__chip">{repo.latestRelease}</span>}
+    {repo.stars > 0 && <span class="rc__chip">★ {compact(repo.stars)}</span>}
+    {repo.openIssues > 0 && <span class="rc__chip">{repo.openIssues} open</span>}
+    {repo.pushedAt && <span class="rc__push">{relativeTime(repo.pushedAt)}</span>}
+  </div>
+</a>
+
+<style>
+  .rc {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  }
+  .rc:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  }
+  .rc--primary {
+    border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+    background: linear-gradient(180deg, var(--surface), var(--bg-tint));
+  }
+  .rc__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .rc__name {
+    font-size: 1.2rem;
+    letter-spacing: var(--tracking-tight);
+  }
+  .rc__role {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-strong);
+    background: var(--wip-bg);
+    padding: 0.2em 0.6em;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+  }
+  .rc__desc {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    flex: 1;
+  }
+  .rc__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: auto;
+    font-size: var(--size-caption);
+  }
+  .rc__lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .rc__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .rc__chip {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: var(--surface-inset);
+    border: 1px solid var(--border-soft);
+    padding: 0.12em 0.55em;
+    border-radius: var(--radius-sm);
+  }
+  .rc__push {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-size: 0.75rem;
+  }
+</style>

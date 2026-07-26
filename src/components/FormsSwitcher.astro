@@ -1,0 +1,211 @@
+---
+import { forms, servicesForForm, profiles } from "../data/site";
+
+const panels = forms.map((f) => {
+  const svc = servicesForForm(f.profiles);
+  return {
+    ...f,
+    services: svc,
+    count: svc.length,
+    profileLabels: f.profiles.map((p) => profiles[p]?.label ?? p),
+  };
+});
+const defaultKey = "tv";
+---
+
+<div class="fs">
+  <div class="fs__tabs" role="tablist" aria-label="Forms">
+    {
+      panels.map((p) => (
+        <button
+          class:list={["fs__tab", { "is-active": p.key === defaultKey }]}
+          role="tab"
+          type="button"
+          id={`tab-${p.key}`}
+          aria-selected={p.key === defaultKey ? "true" : "false"}
+          aria-controls={`panel-${p.key}`}
+          data-form={p.key}
+        >
+          {p.label}
+        </button>
+      ))
+    }
+  </div>
+
+  <div class="fs__stage">
+    {
+      panels.map((p) => (
+        <div
+          class="fs__panel"
+          role="tabpanel"
+          id={`panel-${p.key}`}
+          aria-labelledby={`tab-${p.key}`}
+          hidden={p.key !== defaultKey}
+        >
+          <div class="fs__cmd">
+            <code>
+              <span class="fs__dollar">$</span> lemonfiber up <b>{p.label}</b>
+            </code>
+            <span class="fs__count">
+              {p.count} container{p.count === 1 ? "" : "s"}
+            </span>
+          </div>
+          <p class="fs__blurb">{p.blurb}</p>
+          <ul class="fs__chips">
+            {p.services.map((s) => (
+              <li class:list={["fs__chip", { "is-vpn": s.vpn, "is-house": s.household }]}>
+                {s.name}
+                {s.vpn && <span class="fs__lock" title="VPN-isolated">🔒</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+  <p class="fs__foot">
+    Every form is a set of Compose profiles — <code>full</code> composes them all.
+    <code>lemonfiber up full proxy</code> layers friendly hostnames on top.
+  </p>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>(".fs").forEach((fs) => {
+    const tabs = fs.querySelectorAll<HTMLButtonElement>(".fs__tab");
+    const panels = fs.querySelectorAll<HTMLElement>(".fs__panel");
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const key = tab.dataset.form;
+        tabs.forEach((t) => {
+          const on = t === tab;
+          t.classList.toggle("is-active", on);
+          t.setAttribute("aria-selected", String(on));
+        });
+        panels.forEach((p) => {
+          p.hidden = p.id !== `panel-${key}`;
+        });
+      });
+    });
+  });
+</script>
+
+<style>
+  .fs {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-lift);
+    overflow: hidden;
+  }
+  .fs__tabs {
+    display: flex;
+    gap: 0.15rem;
+    padding: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg-tint);
+  }
+  .fs__tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .fs__tab {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.4em 0.9em;
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.14s ease;
+  }
+  .fs__tab:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+  .fs__tab.is-active {
+    color: var(--lf-ink);
+    background: var(--lf-lemon);
+    border-color: var(--accent);
+  }
+  .fs__stage {
+    padding: var(--space-5);
+  }
+  .fs__cmd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .fs__cmd code {
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .fs__dollar {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .fs__cmd b {
+    color: var(--accent-strong);
+    font-weight: 700;
+  }
+  .fs__count {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--surface-inset);
+    border: 1px solid var(--border-soft);
+    padding: 0.2em 0.7em;
+    border-radius: var(--radius-pill);
+  }
+  .fs__blurb {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+  .fs__chips {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: var(--space-4);
+  }
+  .fs__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.35em 0.7em;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .fs__chip.is-vpn {
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    background: var(--wip-bg);
+  }
+  .fs__chip.is-house {
+    border-color: color-mix(in srgb, var(--leaf) 40%, transparent);
+  }
+  .fs__lock {
+    font-size: 0.75em;
+  }
+  .fs__foot {
+    padding: var(--space-4) var(--space-5);
+    border-top: 1px solid var(--border-soft);
+    background: var(--bg-tint);
+    font-size: var(--size-caption);
+    color: var(--text-faint);
+  }
+  .fs__foot code {
+    color: var(--text-muted);
+  }
+</style>

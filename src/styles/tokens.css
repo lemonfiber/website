@@ -1,0 +1,163 @@
+/*
+ * Design tokens — the single source of truth for the site's look.
+ *
+ * Primitives are lifted verbatim from lemonfiber/brand (tokens.json / tokens.css)
+ * so the site and the future in-app web UI render from one palette. Do not
+ * hand-pick colours here; add a primitive to the brand repo and mirror it.
+ *
+ *   Primitives   raw brand values, theme-independent      (--lf-color-lemon …)
+ *   Semantic     role-based, swapped per theme            (--bg, --text, --accent …)
+ */
+
+:root {
+  /* ── Primitives — core ─────────────────────────────────────────── */
+  --lf-ink: #17160f;
+  --lf-ink-soft: #241f14;
+  --lf-lemon: #f0c419;
+  --lf-lemon-bright: #ffd84d;
+  --lf-fiber: #e07a17;
+  --lf-fiber-deep: #a85a12;
+  --lf-fiber-light: #f09a3c;
+  --lf-leaf: #5b6b2a;
+
+  /* ── Primitives — surfaces ─────────────────────────────────────── */
+  --lf-paper: #fbf7ea;
+  --lf-pith: #fbf6e7;
+  --lf-canvas: #ede7d5;
+  --lf-line: #dad2bc;
+  --lf-line-soft: #e4dcc7;
+  --lf-text-muted: #6e6a57;
+  --lf-text-faint: #8b8770;
+
+  /* ── Type ──────────────────────────────────────────────────────── */
+  --font-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+  --weight-display: 800;
+  --weight-semibold: 650;
+  --weight-body: 500;
+  --tracking-display: -0.045em;
+  --tracking-tight: -0.02em;
+  --tracking-eyebrow: 0.18em;
+
+  --size-hero: clamp(2.3rem, 3.4vw + 1rem, 3.4rem);
+  --size-display-xl: clamp(2.1rem, 4vw + 0.5rem, 3.375rem);
+  --size-display-l: clamp(1.7rem, 2.4vw + 0.6rem, 2.375rem);
+  --size-display-m: clamp(1.3rem, 1vw + 0.9rem, 1.6875rem);
+  --size-body: 1rem;
+  --size-caption: 0.8125rem;
+  --size-eyebrow: 0.75rem;
+
+  /* ── Space — 4px base ──────────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.5rem;
+  --space-8: 3.5rem;
+  --space-9: 5rem;
+  --space-10: 7rem;
+
+  /* ── Radius & elevation ────────────────────────────────────────── */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+  --radius-icon: 22%;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(23, 22, 15, 0.06);
+  --shadow-lift: 0 2px 5px rgba(23, 22, 15, 0.1), 0 8px 24px rgba(23, 22, 15, 0.06);
+  --shadow-pop: 0 4px 12px rgba(23, 22, 15, 0.12), 0 18px 48px rgba(23, 22, 15, 0.1);
+
+  --width-page: 1120px;
+  --width-prose: 720px;
+  --nav-h: 64px;
+
+  /* ── Semantic — LIGHT (paper) is the default ───────────────────── */
+  --bg: var(--lf-paper);
+  --bg-tint: var(--lf-pith);
+  --surface: #ffffff;
+  --surface-2: var(--lf-canvas);
+  --surface-inset: #f4efdf;
+  --border: var(--lf-line);
+  --border-soft: var(--lf-line-soft);
+  --text: var(--lf-ink);
+  --text-muted: var(--lf-text-muted);
+  --text-faint: var(--lf-text-faint);
+  --accent: var(--lf-fiber);
+  --accent-strong: var(--lf-fiber-deep);
+  --accent-2: var(--lf-lemon);
+  --leaf: var(--lf-leaf);
+
+  /* status semantics */
+  --ok: var(--lf-leaf);
+  --ok-bg: #eaeed8;
+  --wip: var(--lf-fiber);
+  --wip-bg: #f8e6cf;
+  --todo: #b7ad91;
+  --todo-bg: #efe9d7;
+
+  /* the terminal is always dark, in both themes */
+  --term-bg: #1b1a12;
+  --term-fg: #f3edd8;
+  --term-dim: #8f8a72;
+  --term-line: #2c2a1f;
+
+  color-scheme: light;
+}
+
+/* ── Semantic — INK (dark) ───────────────────────────────────────── */
+:root[data-theme="ink"] {
+  --bg: var(--lf-ink);
+  --bg-tint: #1c1a12;
+  --surface: #211e15;
+  --surface-2: #2a271b;
+  --surface-inset: #1a180f;
+  --border: #34322a;
+  --border-soft: #2b2921;
+  --text: var(--lf-paper);
+  --text-muted: #b3ac93;
+  --text-faint: #877f66;
+  --accent: var(--lf-fiber-light);
+  --accent-strong: var(--lf-fiber);
+  --accent-2: var(--lf-lemon-bright);
+  --leaf: #8ea24a;
+
+  --ok: #8ea24a;
+  --ok-bg: #24291a;
+  --wip: var(--lf-fiber-light);
+  --wip-bg: #33261595;
+  --todo: #6e6853;
+  --todo-bg: #24221a;
+
+  color-scheme: dark;
+}
+
+/* Honour the OS preference until the user explicitly flips the toggle. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="paper"]) {
+    --bg: var(--lf-ink);
+    --bg-tint: #1c1a12;
+    --surface: #211e15;
+    --surface-2: #2a271b;
+    --surface-inset: #1a180f;
+    --border: #34322a;
+    --border-soft: #2b2921;
+    --text: var(--lf-paper);
+    --text-muted: #b3ac93;
+    --text-faint: #877f66;
+    --accent: var(--lf-fiber-light);
+    --accent-strong: var(--lf-fiber);
+    --accent-2: var(--lf-lemon-bright);
+    --leaf: #8ea24a;
+    --ok: #8ea24a;
+    --ok-bg: #24291a;
+    --wip: var(--lf-fiber-light);
+    --wip-bg: #33261595;
+    --todo: #6e6853;
+    --todo-bg: #24221a;
+    color-scheme: dark;
+  }
+}

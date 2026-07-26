@@ -1,0 +1,9 @@
+[default]
+# Ignore hotkey mockup notation like [e]rror, [s]ervice in TUI/console examples.
+extend-ignore-re = ["\\[[a-z]\\][a-zA-Z]+"]
+
+[default.extend-words]
+lemonfiber = "lemonfiber"
+Servarr = "Servarr"
+Astro = "Astro"
+Seerr = "Seerr"

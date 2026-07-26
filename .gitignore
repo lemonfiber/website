@@ -1,0 +1,18 @@
+# Build output
+dist/
+.astro/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs & OS cruft
+*.log
+.DS_Store
+
+# GSD planning artifacts (not part of the site)
+.planning/

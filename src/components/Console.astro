@@ -1,0 +1,98 @@
+---
+// A faux terminal window. Always dark, in both themes — a terminal is a terminal.
+// Pass `lines` as an array of strings; each may contain colour spans
+// (.c-prompt, .c-cmd, .c-flag, .c-dim, .c-ok, .c-warn, .c-box). Lines are
+// joined with real newlines and rendered into a <pre>, so box art never wraps
+// or collapses (Astro's HTML compressor would eat literal slot newlines).
+interface Props {
+  title?: string;
+  class?: string;
+  lines: string[];
+}
+const { title = "zsh — lemonfiber", class: cls, lines } = Astro.props;
+const html = lines.join("\n");
+---
+
+<div class:list={["console", cls]} role="img" aria-label={`Terminal: ${title}`}>
+  <div class="console__bar">
+    <span class="dot dot--r"></span>
+    <span class="dot dot--y"></span>
+    <span class="dot dot--g"></span>
+    <span class="console__title">{title}</span>
+  </div>
+  <pre class="console__body" set:html={html}></pre>
+</div>
+
+<style>
+  .console {
+    background: var(--term-bg);
+    border: 1px solid var(--term-line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-pop);
+    font-family: var(--font-mono);
+  }
+  .console__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    background: #14130d;
+    border-bottom: 1px solid var(--term-line);
+  }
+  .dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .dot--r {
+    background: #e0533f;
+  }
+  .dot--y {
+    background: var(--lf-lemon);
+  }
+  .dot--g {
+    background: #7bb04a;
+  }
+  .console__title {
+    margin-left: 0.6rem;
+    font-size: 0.72rem;
+    color: var(--term-dim);
+    letter-spacing: 0.02em;
+  }
+  .console__body {
+    margin: 0;
+    padding: 1.1rem 1.25rem 1.35rem;
+    color: var(--term-fg);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    white-space: pre;
+    overflow-x: auto;
+    tab-size: 2;
+    scrollbar-width: thin;
+  }
+  :global(.c-prompt) {
+    color: var(--lf-lemon);
+    font-weight: 700;
+  }
+  :global(.c-cmd) {
+    color: var(--term-fg);
+    font-weight: 600;
+  }
+  :global(.c-flag) {
+    color: var(--lf-fiber-light);
+  }
+  :global(.c-dim) {
+    color: var(--term-dim);
+  }
+  :global(.c-ok) {
+    color: #9ccc5a;
+  }
+  :global(.c-warn) {
+    color: var(--lf-fiber-light);
+  }
+  :global(.c-box) {
+    color: #57544a;
+  }
+</style>

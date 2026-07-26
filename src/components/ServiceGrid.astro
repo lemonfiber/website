@@ -1,0 +1,112 @@
+---
+import { services } from "../data/site";
+
+const order = ["Find", "Download", "Organise", "Enjoy", "Tune", "Access"];
+const groups = order.map((g) => ({
+  name: g,
+  items: services.filter((s) => s.group === g),
+}));
+---
+
+<div class="sg">
+  {
+    groups.map((g) => (
+      <div class="sg__group">
+        <div class="sg__head">
+          <span class="sg__flow">{g.name}</span>
+          <span class="sg__n">{g.items.length}</span>
+        </div>
+        <ul class="sg__list">
+          {g.items.map((s) => (
+            <li class:list={["sg__item", { "is-vpn": s.vpn, "is-house": s.household }]}>
+              <span class="sg__name">{s.name}</span>
+              <span class="sg__role">{s.role}</span>
+              {s.vpn && <span class="sg__tag">VPN</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
+</div>
+
+<style>
+  .sg {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-4);
+    counter-reset: flow;
+  }
+  .sg__group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+  }
+  .sg__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px dashed var(--border);
+    counter-increment: flow;
+  }
+  .sg__flow {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: var(--tracking-tight);
+    font-size: 1.05rem;
+  }
+  .sg__flow::before {
+    content: counter(flow) " · ";
+    color: var(--accent);
+  }
+  .sg__n {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    background: var(--surface-inset);
+    border-radius: var(--radius-pill);
+    padding: 0.1em 0.55em;
+  }
+  .sg__list {
+    list-style: none;
+    display: grid;
+    gap: 0.3rem;
+  }
+  .sg__item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.35rem 0.4rem;
+    border-radius: var(--radius-md);
+    transition: background-color 0.14s ease;
+  }
+  .sg__item:hover {
+    background: var(--surface-2);
+  }
+  .sg__name {
+    font-weight: 650;
+    font-size: 0.92rem;
+  }
+  .sg__item.is-house .sg__name {
+    color: var(--accent-strong);
+  }
+  .sg__role {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+    text-align: right;
+  }
+  .sg__tag {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--accent-strong);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: var(--radius-sm);
+    padding: 0.05em 0.3em;
+  }
+</style>

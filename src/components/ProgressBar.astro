@@ -1,0 +1,66 @@
+---
+interface Props {
+  pct: number;
+  status?: "done" | "partial" | "todo";
+  label?: string;
+  size?: "sm" | "md";
+}
+const { pct, status = "partial", label, size = "md" } = Astro.props;
+const clamped = Math.max(0, Math.min(100, pct));
+---
+
+<div class:list={["pb", `pb--${size}`, `pb--${status}`]}>
+  {label && <span class="pb__label">{label}</span>}
+  <div class="pb__track" role="progressbar" aria-valuenow={clamped} aria-valuemin="0" aria-valuemax="100" aria-label={label ?? "progress"}>
+    <span class="pb__fill" style={`width:${clamped}%`}></span>
+  </div>
+  <span class="pb__pct">{clamped}%</span>
+</div>
+
+<style>
+  .pb {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+  }
+  .pb__label {
+    grid-column: 1 / -1;
+    font-size: var(--size-caption);
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .pb__track {
+    height: 8px;
+    background: var(--surface-inset);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    border: 1px solid var(--border-soft);
+  }
+  .pb--sm .pb__track {
+    height: 6px;
+  }
+  .pb__fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .pb--done .pb__fill {
+    background: linear-gradient(90deg, var(--leaf), var(--ok));
+  }
+  .pb--partial .pb__fill {
+    background: linear-gradient(90deg, var(--lf-lemon), var(--accent));
+  }
+  .pb--todo .pb__fill {
+    background: var(--todo);
+  }
+  .pb__pct {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    min-width: 3ch;
+    text-align: right;
+  }
+</style>
