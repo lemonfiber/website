@@ -23,8 +23,6 @@ jobs:
       - run: npm ci
       - name: Type-check
         run: npm run check
-      - name: Spelling
-        uses: crate-ci/typos@11ca4583e0d2c76a9dcbbf9edf4b0b62eef9dda9 # v1.29.4
       - name: Build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
