@@ -4,9 +4,18 @@ import "@fontsource-variable/jetbrains-mono";
 import "../styles/global.css";
 import Nav from "../components/Nav.astro";
 import Footer from "../components/Footer.astro";
+import LanguageRedirect from "../components/LanguageRedirect.astro";
 import { site } from "../data/site";
+import { copyFor, localePath, DEFAULT_LOCALE, LOCALES, type Locale } from "../i18n";
 
 interface Props {
+  // Optional, defaulting to English, so the pages written before the locale
+  // tree existed keep working untouched.
+  locale?: Locale;
+  // Which locales this particular page actually exists in. Defaults to all of
+  // them; a page whose translation has not been written yet passes just its
+  // own, which hides the switcher rather than offering a link that 404s.
+  translated?: Locale[];
   title?: string;
   description?: string;
   stars?: number;
@@ -14,37 +23,112 @@ interface Props {
 }
 
 const {
+  locale = DEFAULT_LOCALE,
+  translated = [...LOCALES],
   title,
-  description = site.description,
+  description,
   stars,
   active,
 } = Astro.props;
+const t = copyFor(locale);
 
-const fullTitle = title ? `${title} · ${site.name}` : `${site.name} — ${site.tagline}`;
-const canonical = new URL(Astro.url.pathname, Astro.site ?? "https://lemonfiber.io").href;
+const metaDescription = description ?? t.meta.description;
+const fullTitle = title ? `${title} · ${site.name}` : `${site.name} — ${t.meta.tagline}`;
+
+const origin = Astro.site ?? new URL("https://lemonfiber.app");
+const canonical = new URL(Astro.url.pathname, origin).href;
+
+// The same page in the other locale, for hreflang. Derived from the current
+// path with its locale segment stripped, so every page advertises its own
+// twin rather than every page pointing at the two front pages.
+const route = Astro.url.pathname.replace(/^\/nl(?=\/|$)/, "") || "/";
+
+const ogImage = site.ogImage ? new URL(site.ogImage, origin).href : undefined;
+
+// Sitewide identity. Page-specific types (the application itself, the FAQ)
+// are declared by the pages that own them, so this graph stays the one thing
+// that is true on every page.
+const identity = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${origin.origin}/#org`,
+      name: site.name,
+      url: origin.origin,
+      logo: new URL("/brand/logo.svg", origin).href,
+      sameAs: [site.githubOrg, site.by.url],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${origin.origin}/#site`,
+      name: site.name,
+      url: origin.origin,
+      inLanguage: translated.map((l) => (l === "nl" ? "nl-NL" : "en-GB")),
+      publisher: { "@id": `${origin.origin}/#org` },
+    },
+  ],
+};
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={t.meta.lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
-    <meta name="description" content={description} />
+    <meta name="description" content={metaDescription} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    {/* Only the locales this page is genuinely published in. Advertising a
+        hreflang for a page that does not exist is worse than advertising none. */}
+    {
+      translated.length > 1 &&
+        translated.map((l) => (
+          <link rel="alternate" hreflang={l} href={new URL(localePath(l, route), origin).href} />
+        ))
+    }
+    {
+      translated.length > 1 && (
+        <link rel="alternate" hreflang="x-default" href={new URL(route, origin).href} />
+      )
+    }
+
     <meta name="theme-color" content="#17160F" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#FBF7EA" media="(prefers-color-scheme: light)" />
     <meta name="color-scheme" content="light dark" />
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content={fullTitle} />
-    <meta property="og:description" content={description} />
+    <meta property="og:description" content={metaDescription} />
     <meta property="og:url" content={canonical} />
     <meta property="og:site_name" content={site.name} />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:locale" content={locale === "nl" ? "nl_NL" : "en_GB"} />
+    {
+      translated.filter((l) => l !== locale).map((l) => (
+        <meta property="og:locale:alternate" content={l === "nl" ? "nl_NL" : "en_GB"} />
+      ))
+    }
+    {
+      ogImage && (
+        <>
+          <meta property="og:image" content={ogImage} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          <meta property="og:image:alt" content={t.meta.tagline} />
+          <meta name="twitter:image" content={ogImage} />
+        </>
+      )
+    }
+    {/* Downgrades to `summary` until site.ogImage names a real card —
+        `summary_large_image` with no image is downgraded by every crawler
+        anyway, so claiming it would only be noise. */}
+    <meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
 
     <meta name="generator" content={Astro.generator} />
+
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(identity)} />
 
     {/* Apply the saved theme before paint to avoid a flash. */}
     <script is:inline>
@@ -59,11 +143,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? "https://lemonfiber.
     </script>
   </head>
   <body>
-    <a class="skip-link" href="#main">Skip to content</a>
-    <Nav stars={stars} active={active} />
+    <LanguageRedirect locale={locale} translated={translated} />
+    <a class="skip-link" href="#main">{t.nav.skip}</a>
+    <Nav locale={locale} translated={translated} stars={stars} active={active} />
     <main id="main">
       <slot />
     </main>
-    <Footer />
+    <Footer locale={locale} />
   </body>
 </html>

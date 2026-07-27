@@ -1,0 +1,62 @@
+---
+// Client-side locale detection.
+//
+// The site is fully prerendered onto a static host, so there is no request-time
+// layer that could vary on Accept-Language. This inline script is the whole
+// mechanism, and it is deliberately timid:
+//
+//   - it only ever runs on the default-locale (English) tree, so a visitor
+//     already on /nl is never bounced anywhere;
+//   - it fires once and records that it did, so a reader who navigates back to
+//     English is not dragged to Dutch again on the next page;
+//   - an explicit choice from the language switcher writes the same key, which
+//     turns the redirect off permanently;
+//   - it checks navigator.languages, honouring the visitor's real ordering
+//     rather than guessing from a single value.
+//
+// The redirect is a replace(), not an assign(), so it leaves no history entry
+// to trap the back button.
+import { DEFAULT_LOCALE, LOCALE_KEY, LOCALES, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+  // Detection is pointless — and actively harmful — on a page with no Dutch
+  // twin: it would bounce a Dutch-speaking visitor straight into a 404.
+  translated?: Locale[];
+}
+
+const { locale, translated = [...LOCALES] } = Astro.props;
+const shouldDetect = locale === DEFAULT_LOCALE && translated.includes("nl");
+---
+
+{
+  shouldDetect && (
+    <script is:inline define:vars={{ key: LOCALE_KEY }}>
+      (() => {
+        try {
+          if (localStorage.getItem(key)) return;
+
+          const langs =
+            navigator.languages && navigator.languages.length
+              ? navigator.languages
+              : [navigator.language];
+
+          // First entry that names a locale we actually publish wins. Anything
+          // else (de, fr, …) stays on English rather than guessing.
+          for (const raw of langs) {
+            const tag = String(raw || "").toLowerCase();
+            if (tag === "nl" || tag.startsWith("nl-")) {
+              localStorage.setItem(key, "nl");
+              const rest = window.location.pathname === "/" ? "" : window.location.pathname;
+              window.location.replace(
+                "/nl" + rest + window.location.search + window.location.hash,
+              );
+              return;
+            }
+            if (tag === "en" || tag.startsWith("en-")) return;
+          }
+        } catch {}
+      })();
+    </script>
+  )
+}

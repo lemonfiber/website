@@ -1,0 +1,752 @@
+---
+// Every release across the org, rendered from the GitHub Releases API. The
+// bodies are generated from the commit log at tag time, so there is nothing
+// here that can disagree with what shipped — no file to forget to update.
+//
+// Release bodies are `### Group` headings and `- item` bullets. Anything else
+// is passed through as a paragraph rather than dropped, so an unusual release
+// note degrades to plain text instead of vanishing.
+//
+// Only the three inline marks release notes actually use are rendered; the
+// rest of Markdown is escaped and shown literally rather than pulling a parser
+// in for text the release pipeline generates. That escaping is load-bearing:
+// release bodies are written by anyone with release rights, so they are not
+// trusted input.
+//
+// The facets are built from what the releases actually contain rather than a
+// fixed list, so a component nobody has touched yet never appears and one
+// introduced tomorrow needs no change here. lemonfiber is a multi-repo org, so
+// the repo is a facet too — it is the first thing you want to narrow by when
+// the binary and the stack release on different cadences.
+import { getSiteData } from "../lib/github";
+import { site } from "../data/site";
+import { copyFor, DEFAULT_LOCALE, type Locale } from "../i18n";
+import { releaseDate, fileSize } from "../lib/format";
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const t = copyFor(locale);
+const data = await getSiteData();
+
+interface Item {
+  text: string;
+  // The conventional-commit scope the release pipeline publishes as `*(name)*`
+  // or as a leading `name:`. Releases predating the convention have none.
+  scope?: string;
+}
+
+interface Block {
+  heading: string;
+  key: string;
+  items: Item[];
+}
+
+const slug = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+function toItem(raw: string): Item {
+  const starred = /^\*\(([^)]+)\)\*\s*(.*)$/.exec(raw);
+  if (starred) return { scope: starred[1].trim().toLowerCase(), text: starred[2] };
+  // `cli: something` — the shape git-cliff emits without the bold-scope template.
+  const prefixed = /^([a-z][a-z0-9-]{1,20}):\s+(.*)$/.exec(raw);
+  if (prefixed) return { scope: prefixed[1].toLowerCase(), text: prefixed[2] };
+  return { text: raw };
+}
+
+function parseBody(body: string | undefined): { blocks: Block[]; prose: string[] } {
+  const blocks: Block[] = [];
+  const prose: string[] = [];
+  let current: Block | null = null;
+  // Bullets wrap across lines in hand-written notes; a continuation rejoins
+  // its bullet instead of being dropped on the floor.
+  let open: Item[] | string[] | null = null;
+
+  for (const rawLine of (body ?? "").split("\n")) {
+    const line = rawLine.trim();
+    if (!line) {
+      open = null;
+      continue;
+    }
+
+    if (line.startsWith("#")) {
+      if (current?.items.length) blocks.push(current);
+      const heading = line.replace(/^#+\s*/, "");
+      current = { heading, key: slug(heading), items: [] };
+      open = null;
+      continue;
+    }
+
+    const bullet = /^[-*]\s+(.*)$/.exec(line);
+    if (bullet) {
+      if (current) {
+        current.items.push(toItem(bullet[1]));
+        open = current.items;
+      } else {
+        prose.push(bullet[1]);
+        open = prose;
+      }
+      continue;
+    }
+
+    if (open?.length) {
+      const last = open[open.length - 1];
+      if (typeof last === "string") (open as string[])[open.length - 1] = `${last} ${line}`;
+      else last.text += ` ${line}`;
+      continue;
+    }
+    if (!current) prose.push(line);
+  }
+  if (current?.items.length) blocks.push(current);
+  return { blocks, prose };
+}
+
+const ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+};
+
+// Escape first, then re-introduce only the three marks release notes use. Any
+// other markup a release body contains ends up shown literally, which is the
+// intended outcome rather than a limitation.
+function inline(text: string): string {
+  return text
+    .replace(/[&<>"]/g, (c) => ESCAPES[c])
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener">$1</a>',
+    );
+}
+
+// Strips the marks so the value the search matches against is what a reader
+// sees, not the markup behind it.
+const plain = (s: string) =>
+  s
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[*`]/g, "")
+    .toLowerCase();
+
+const releases = data.releases.map((r) => {
+  const parsed = parseBody(r.body);
+  const count = parsed.blocks.reduce((n, b) => n + b.items.length, 0);
+  return { ...r, ...parsed, count };
+});
+
+const totalChanges = releases.reduce((n, r) => n + r.count, 0);
+
+// Facets, counted across every release so a chip can say how much it will
+// leave behind before it is clicked.
+const typeCounts = new Map<string, { label: string; n: number }>();
+const componentCounts = new Map<string, number>();
+const repoCounts = new Map<string, number>();
+
+for (const r of releases) {
+  repoCounts.set(r.repo, (repoCounts.get(r.repo) ?? 0) + 1);
+  for (const b of r.blocks) {
+    const seen = typeCounts.get(b.key);
+    typeCounts.set(b.key, { label: b.heading, n: (seen?.n ?? 0) + b.items.length });
+    for (const i of b.items) {
+      if (i.scope) componentCounts.set(i.scope, (componentCounts.get(i.scope) ?? 0) + 1);
+    }
+  }
+}
+
+const types = [...typeCounts.entries()]
+  .map(([key, v]) => ({ key, ...v }))
+  .sort((a, b) => b.n - a.n);
+
+const components = [...componentCounts.entries()]
+  .map(([key, n]) => ({ key, n }))
+  .sort((a, b) => b.n - a.n || a.key.localeCompare(b.key));
+
+// Only worth offering once more than one repo has actually released.
+const repos = [...repoCounts.entries()]
+  .map(([key, n]) => ({ key, n }))
+  .sort((a, b) => b.n - a.n || a.key.localeCompare(b.key));
+
+// "Breaking" leads visually wherever it appears — it is the one heading a
+// reader must not skim past.
+const toneFor = (heading: string) =>
+  /break|remove/i.test(heading)
+    ? "warn"
+    : /feature|added|new/i.test(heading)
+      ? "accent"
+      : "plain";
+---
+
+<div class="cl">
+  {
+    !data.live && (
+      <p class="cl__stale badge badge--warn">
+        <span class="badge__dot" aria-hidden="true" />
+        {t.status.snapshotNote}
+      </p>
+    )
+  }
+
+  {
+    releases.length > 0 && (
+      <div class="cl__stats">
+        <span class="cl__stat">
+          <b class="mono">{releases.length}</b> {t.changelog.statReleases}
+        </span>
+        <span class="cl__stat">
+          <b class="mono">{totalChanges}</b> {t.changelog.statChanges}
+        </span>
+        <span class="cl__stat">
+          <b class="mono">{releases[0].tag}</b> {t.changelog.statLatest}
+        </span>
+      </div>
+    )
+  }
+
+  {
+    releases.length === 0 ? (
+      <p class="cl__empty">
+        {t.changelog.unavailable}{" "}
+        <a href={site.githubOrg} target="_blank" rel="noopener">
+          {t.changelog.source}
+        </a>
+      </p>
+    ) : (
+      <>
+        <form class="filters" data-cl-filters role="search" aria-label={t.changelog.filterLabel}>
+          <div class="filters__row">
+            <input
+              class="filters__search"
+              type="search"
+              data-cl-search
+              aria-label={t.changelog.searchLabel}
+              placeholder={t.changelog.searchPlaceholder}
+            />
+            <output class="filters__count" data-cl-count data-template={t.changelog.matchCount} />
+            <button class="filters__reset" type="button" data-cl-reset hidden>
+              {t.changelog.reset}
+            </button>
+          </div>
+
+          <div class="filters__group">
+            <span class="filters__legend">{t.changelog.byType}</span>
+            <div class="filters__chips">
+              {types.map((ty) => (
+                <button class="chip" type="button" data-cl-type={ty.key} aria-pressed="false">
+                  {ty.label} <span class="chip__n mono">{ty.n}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {repos.length > 1 && (
+            <div class="filters__group">
+              <span class="filters__legend">{t.changelog.byRepo}</span>
+              <div class="filters__chips">
+                {repos.map((r) => (
+                  <button class="chip" type="button" data-cl-repo={r.key} aria-pressed="false">
+                    {r.key} <span class="chip__n mono">{r.n}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {components.length > 0 && (
+            <div class="filters__group">
+              <span class="filters__legend">{t.changelog.byComponent}</span>
+              <div class="filters__chips">
+                {components.map((c) => (
+                  <button class="chip" type="button" data-cl-comp={c.key} aria-pressed="false">
+                    {c.key} <span class="chip__n mono">{c.n}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {components.length === 0 && <p class="filters__hint">{t.changelog.noComponents}</p>}
+        </form>
+
+        <p class="cl__none" data-cl-none hidden>{t.changelog.noMatches}</p>
+
+        <ol class="cl__list">
+          {releases.map((r, i) => (
+            <li class="cl__rel" id={r.tag} data-cl-rel data-repo={r.repo}>
+              <details class="cl__card card" open={i === 0} data-cl-details>
+                <summary class="cl__sum">
+                  <span class="cl__title">
+                    <span class="cl__tag mono">{r.tag}</span>
+                    <span class="cl__repo">{r.repo}</span>
+                    {r.prerelease && (
+                      <span class="badge badge--warn cl__pre">{t.changelog.prerelease}</span>
+                    )}
+                  </span>
+                  <span class="cl__meta">
+                    <span class="cl__shown mono" data-cl-shown data-total={r.count}>
+                      {r.count}
+                    </span>
+                    <time class="cl__date" datetime={r.publishedAt}>
+                      {releaseDate(r.publishedAt, locale)}
+                    </time>
+                  </span>
+                </summary>
+
+                <div class="cl__body">
+                  {r.name !== r.tag && <h2 class="cl__name">{r.name}</h2>}
+
+                  {r.prose.map((p) => (
+                    <p class="cl__prose" data-cl-prose data-text={plain(p)} set:html={inline(p)} />
+                  ))}
+
+                  {r.blocks.map((b) => (
+                    <section
+                      class:list={["cl__block", `is-${toneFor(b.heading)}`]}
+                      data-cl-block
+                      data-type={b.key}
+                    >
+                      <h3 class="cl__bh">{b.heading}</h3>
+                      <ul class="cl__items">
+                        {b.items.map((it) => (
+                          <li
+                            data-cl-item
+                            data-comp={it.scope ?? ""}
+                            data-text={plain(`${it.scope ?? ""} ${it.text}`).trim()}
+                          >
+                            {it.scope && <span class="cl__scope mono">{it.scope}</span>}
+                            <span set:html={inline(it.text)} />
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+
+                  {r.assets && r.assets.length > 0 && (
+                    <div class="cl__assets">
+                      <h3 class="cl__bh">{t.changelog.assets}</h3>
+                      <ul class="cl__files">
+                        {r.assets.map((a) => (
+                          <li>
+                            <a href={a.url} class="mono">
+                              {a.name}
+                            </a>
+                            {a.size > 0 && <span class="cl__size mono">{fileSize(a.size)}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <p class="cl__link">
+                    <a href={r.url} target="_blank" rel="noopener">
+                      {t.changelog.onGitHub} →
+                    </a>
+                  </p>
+                </div>
+              </details>
+            </li>
+          ))}
+        </ol>
+      </>
+    )
+  }
+</div>
+
+{/* Filtering is a progressive enhancement: without it every entry is present
+    and readable, and the newest release is already open. */}
+<script>
+  const form = document.querySelector<HTMLFormElement>("[data-cl-filters]");
+  if (form) {
+    const search = form.querySelector<HTMLInputElement>("[data-cl-search]")!;
+    const countOut = form.querySelector<HTMLOutputElement>("[data-cl-count]")!;
+    const reset = form.querySelector<HTMLButtonElement>("[data-cl-reset]")!;
+    const none = document.querySelector<HTMLElement>("[data-cl-none]")!;
+    const releases = [...document.querySelectorAll<HTMLElement>("[data-cl-rel]")];
+    const template = countOut.dataset.template ?? "";
+
+    const activeTypes = new Set<string>();
+    const activeComps = new Set<string>();
+    const activeRepos = new Set<string>();
+
+    const chips = (attr: string) => [
+      ...form.querySelectorAll<HTMLButtonElement>(`[data-cl-${attr}]`),
+    ];
+
+    // Whether a release was open before filtering started, so clearing the
+    // filters restores what the reader had rather than a fresh page's state.
+    const openState = new WeakMap<HTMLDetailsElement, boolean>();
+
+    function apply() {
+      const q = search.value.trim().toLowerCase();
+      const filtering =
+        q !== "" || activeTypes.size > 0 || activeComps.size > 0 || activeRepos.size > 0;
+      let shown = 0;
+
+      for (const rel of releases) {
+        const details = rel.querySelector<HTMLDetailsElement>("[data-cl-details]")!;
+        if (!openState.has(details)) openState.set(details, details.open);
+
+        const repoOk = activeRepos.size === 0 || activeRepos.has(rel.dataset.repo ?? "");
+        let inRelease = 0;
+
+        for (const block of rel.querySelectorAll<HTMLElement>("[data-cl-block]")) {
+          const typeOk = activeTypes.size === 0 || activeTypes.has(block.dataset.type ?? "");
+          let inBlock = 0;
+
+          for (const item of block.querySelectorAll<HTMLElement>("[data-cl-item]")) {
+            const comp = item.dataset.comp ?? "";
+            const hit =
+              repoOk &&
+              typeOk &&
+              (activeComps.size === 0 || activeComps.has(comp)) &&
+              (q === "" || (item.dataset.text ?? "").includes(q));
+            item.hidden = !hit;
+            if (hit) inBlock++;
+          }
+
+          block.hidden = inBlock === 0;
+          inRelease += inBlock;
+        }
+
+        // A body with no headings is all prose. It carries no type or scope, so
+        // those filters correctly exclude it, but a search still has to find it.
+        for (const para of rel.querySelectorAll<HTMLElement>("[data-cl-prose]")) {
+          const hit =
+            repoOk &&
+            activeTypes.size === 0 &&
+            activeComps.size === 0 &&
+            (q === "" || (para.dataset.text ?? "").includes(q));
+          para.hidden = !hit;
+          if (hit && q !== "") inRelease++;
+        }
+
+        // With no filter on, nothing is hidden — including a release whose body
+        // is prose only and therefore contributes no counted entries.
+        rel.hidden = filtering && inRelease === 0;
+        shown += inRelease;
+
+        const badge = rel.querySelector<HTMLElement>("[data-cl-shown]");
+        if (badge) badge.textContent = filtering ? String(inRelease) : (badge.dataset.total ?? "");
+        // A filtered result the reader cannot see is the same as no result,
+        // so matching releases open themselves while a filter is on.
+        details.open = filtering ? true : (openState.get(details) ?? false);
+      }
+
+      none.hidden = shown > 0;
+      countOut.textContent = filtering ? template.replace("{n}", String(shown)) : "";
+      reset.hidden = !filtering;
+    }
+
+    const bindChips = (attr: string, prop: string, set: Set<string>) => {
+      for (const chip of chips(attr)) {
+        chip.addEventListener("click", () => {
+          const key = chip.dataset[prop]!;
+          set.has(key) ? set.delete(key) : set.add(key);
+          chip.setAttribute("aria-pressed", String(set.has(key)));
+          apply();
+        });
+      }
+    };
+
+    bindChips("type", "clType", activeTypes);
+    bindChips("comp", "clComp", activeComps);
+    bindChips("repo", "clRepo", activeRepos);
+
+    search.addEventListener("input", apply);
+    form.addEventListener("submit", (e) => e.preventDefault());
+
+    reset.addEventListener("click", () => {
+      search.value = "";
+      activeTypes.clear();
+      activeComps.clear();
+      activeRepos.clear();
+      for (const chip of [...chips("type"), ...chips("comp"), ...chips("repo")]) {
+        chip.setAttribute("aria-pressed", "false");
+      }
+      apply();
+    });
+
+    apply();
+  }
+</script>
+
+<style>
+  .cl__stale {
+    margin-top: var(--space-6);
+  }
+  .cl__stats {
+    margin-top: var(--space-5);
+    display: flex;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+  .cl__stat b {
+    color: var(--accent-strong);
+    font-size: 1.05rem;
+    margin-right: 0.25rem;
+  }
+
+  /* ── Filters ─────────────────────────────────────────────────── */
+  .filters {
+    margin-top: var(--space-6);
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--bg-tint);
+    display: grid;
+    gap: var(--space-4);
+  }
+  .filters__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .filters__search {
+    flex: 1 1 16rem;
+    padding: 0.55em 0.9em;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.92rem;
+  }
+  .filters__count {
+    font-size: var(--size-caption);
+    color: var(--text-faint);
+  }
+  .filters__reset {
+    font-size: var(--size-caption);
+    font-weight: 600;
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .filters__group {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .filters__legend {
+    font-size: var(--size-eyebrow);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--text-faint);
+    font-weight: 700;
+    flex: none;
+    min-width: 6.5rem;
+  }
+  .filters__chips {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+  .filters__hint {
+    font-size: var(--size-caption);
+    color: var(--text-faint);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.25em 0.75em;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: var(--size-caption);
+    font-weight: 600;
+    color: var(--text-muted);
+    transition:
+      border-color 0.14s ease,
+      background-color 0.14s ease,
+      color 0.14s ease;
+  }
+  .chip:hover {
+    border-color: var(--text);
+    color: var(--text);
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--accent-bg);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    color: var(--accent-strong);
+  }
+  .chip__n {
+    font-size: 0.68rem;
+    opacity: 0.7;
+  }
+
+  /* ── Releases ────────────────────────────────────────────────── */
+  .cl__none,
+  .cl__empty {
+    margin-top: var(--space-6);
+    color: var(--text-muted);
+  }
+  .cl__empty a {
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .cl__list {
+    list-style: none;
+    margin-top: var(--space-5);
+    display: grid;
+    gap: var(--space-4);
+    padding: 0;
+  }
+  .cl__card {
+    padding: 0;
+    overflow: hidden;
+  }
+  .cl__sum {
+    cursor: pointer;
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    list-style: none;
+  }
+  .cl__sum::-webkit-details-marker {
+    display: none;
+  }
+  .cl__sum:hover {
+    background: var(--surface-2);
+  }
+  .cl__title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+  .cl__tag {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--accent-strong);
+  }
+  .cl__repo {
+    font-size: var(--size-caption);
+    color: var(--text-faint);
+  }
+  .cl__pre {
+    font-size: 0.68rem;
+    padding: 0.1em 0.55em;
+  }
+  .cl__meta {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+  .cl__shown {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-faint);
+    background: var(--surface-inset);
+    border-radius: var(--radius-pill);
+    padding: 0.1em 0.55em;
+  }
+  .cl__date {
+    font-size: var(--size-caption);
+    color: var(--text-faint);
+  }
+  .cl__body {
+    padding: 0 var(--space-5) var(--space-5);
+    border-top: 1px solid var(--border-soft);
+    padding-top: var(--space-4);
+  }
+  .cl__name {
+    font-size: var(--size-display-m);
+    letter-spacing: var(--tracking-tight);
+  }
+  .cl__prose {
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    max-width: 78ch;
+  }
+  .cl__block,
+  .cl__assets {
+    margin-top: var(--space-5);
+  }
+  .cl__block.is-warn {
+    border-left: 2px solid var(--warn);
+    padding-left: var(--space-4);
+  }
+  .cl__block.is-accent {
+    border-left: 2px solid var(--accent);
+    padding-left: var(--space-4);
+  }
+  .cl__bh {
+    font-size: var(--size-eyebrow);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--text-faint);
+    font-weight: 700;
+  }
+  .cl__items {
+    margin-top: var(--space-3);
+    padding-left: 0;
+    list-style: none;
+    display: grid;
+    gap: var(--space-2);
+    max-width: 78ch;
+  }
+  .cl__items li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    color: var(--text-muted);
+  }
+  .cl__scope {
+    flex: none;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--accent-strong);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: var(--radius-sm);
+    padding: 0.05em 0.35em;
+  }
+  .cl__files {
+    margin-top: var(--space-3);
+    padding-left: 0;
+    list-style: none;
+    display: grid;
+    gap: var(--space-2);
+  }
+  .cl__files li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    font-size: 0.85rem;
+  }
+  .cl__files a,
+  .cl__link a {
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .cl__size {
+    color: var(--text-faint);
+    font-size: 0.78rem;
+  }
+  .cl__link {
+    margin-top: var(--space-5);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 560px) {
+    .filters__legend {
+      min-width: 0;
+      width: 100%;
+    }
+  }
+</style>

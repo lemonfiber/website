@@ -1,0 +1,14 @@
+---
+import Base from "../layouts/Base.astro";
+import DocPage from "../components/DocPage.astro";
+import ReleaseAssets from "../components/ReleaseAssets.astro";
+import { docFor } from "../i18n/pages";
+
+const doc = docFor("en", "install")!;
+---
+
+<Base locale="en" active="install" title={doc.title} description={doc.lead}>
+  <DocPage doc={doc}>
+    <ReleaseAssets locale="en" />
+  </DocPage>
+</Base>

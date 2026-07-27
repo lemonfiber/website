@@ -1,0 +1,224 @@
+---
+// The stack as a flow, not a list.
+//
+// This is the site's answer to the screenshot problem: lemonfiber has no UI of
+// its own to photograph — it orchestrates nineteen other people's UIs — so the
+// thing worth showing is the shape of the pipeline and where each service sits
+// in it. Drawn in CSS from the same `services` manifest ServiceGrid reads, so
+// it cannot disagree with the stack, and there is no image to re-export when a
+// service is added.
+import { services } from "../data/site";
+
+// The four stages media actually moves through, in order. Tune and Access are
+// deliberately not in the chain — they sit alongside every stage rather than
+// between two of them, so drawing them inline would misrepresent the flow.
+const STAGES = [
+  { name: "Find", blurb: "Ask every indexer at once" },
+  { name: "Download", blurb: "Usenet direct, torrents via VPN" },
+  { name: "Organise", blurb: "Renamed, hardlinked, subtitled" },
+  { name: "Enjoy", blurb: "Served to every screen in the house" },
+];
+
+const stages = STAGES.map((s) => ({
+  ...s,
+  items: services.filter((x) => x.group === s.name),
+}));
+
+const alongside = ["Tune", "Access"].map((name) => ({
+  name,
+  items: services.filter((x) => x.group === name),
+}));
+---
+
+<div class="pl">
+  <ol class="pl__flow">
+    {
+      stages.map((s, i) => (
+        <li class="pl__stage">
+          <div class="pl__card card">
+            <div class="pl__head">
+              <span class="pl__n mono">{String(i + 1).padStart(2, "0")}</span>
+              <h3 class="pl__name">{s.name}</h3>
+            </div>
+            <p class="pl__blurb">{s.blurb}</p>
+            <ul class="pl__svcs">
+              {s.items.map((x) => (
+                <li class:list={["pl__svc", { "is-vpn": x.vpn }]}>
+                  {x.name}
+                  {x.vpn && (
+                    <span class="pl__vpn" title="Routed through the VPN gateway">
+                      VPN
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {i < stages.length - 1 && (
+            <span class="pl__arrow" aria-hidden="true">
+              →
+            </span>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+
+  <div class="pl__rail">
+    <span class="pl__rail-label">Alongside every stage</span>
+    <div class="pl__rail-groups">
+      {
+        alongside.map((g) => (
+          <div class="pl__rail-group">
+            <b>{g.name}</b>
+            <span>{g.items.map((x) => x.name).join(" · ")}</span>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</div>
+
+<style>
+  .pl__flow {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+    padding: 0;
+  }
+  .pl__stage {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+  }
+  .pl__card {
+    padding: var(--space-4);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .pl__head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+  .pl__n {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .pl__name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: var(--tracking-tight);
+    font-size: 1.05rem;
+  }
+  .pl__blurb {
+    margin-top: var(--space-2);
+    font-size: 0.82rem;
+    color: var(--text-faint);
+    line-height: 1.5;
+    min-height: 2.4em;
+  }
+  .pl__svcs {
+    list-style: none;
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--border);
+    display: grid;
+    gap: 0.3rem;
+  }
+  .pl__svc {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+  .pl__vpn {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--accent-strong);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: var(--radius-sm);
+    padding: 0.05em 0.3em;
+  }
+  /* The arrow sits in the gutter between two cards rather than inside either,
+     so it stays centred whatever the cards' heights work out to be. */
+  .pl__arrow {
+    position: absolute;
+    right: calc(var(--space-3) / -2);
+    top: 50%;
+    transform: translate(50%, -50%);
+    width: 1.5rem;
+    height: 1.5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--bg);
+    color: var(--accent);
+    font-weight: 700;
+    z-index: 1;
+  }
+  .pl__rail {
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+  }
+  .pl__rail-label {
+    font-size: var(--size-eyebrow);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--text-faint);
+    font-weight: 700;
+    flex: none;
+  }
+  .pl__rail-groups {
+    display: flex;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+  }
+  .pl__rail-group {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.86rem;
+  }
+  .pl__rail-group span {
+    color: var(--text-faint);
+  }
+
+  @media (max-width: 900px) {
+    .pl__flow {
+      grid-template-columns: 1fr 1fr;
+    }
+    /* Rotating the arrow rather than hiding it keeps the flow readable once
+       the row wraps into a grid. */
+    .pl__stage:nth-child(2) .pl__arrow {
+      right: 50%;
+      top: auto;
+      bottom: calc(var(--space-3) / -2);
+      transform: translate(50%, 50%) rotate(90deg);
+    }
+  }
+  @media (max-width: 560px) {
+    .pl__flow {
+      grid-template-columns: 1fr;
+    }
+    .pl__arrow,
+    .pl__stage:nth-child(2) .pl__arrow {
+      right: 50%;
+      top: auto;
+      bottom: calc(var(--space-3) / -2);
+      transform: translate(50%, 50%) rotate(90deg);
+    }
+  }
+</style>

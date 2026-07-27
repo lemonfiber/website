@@ -1,0 +1,17 @@
+# Link check configuration. The shared hygiene workflow runs lychee from the
+# repository root, which picks this up automatically.
+
+exclude = [
+  # Self-references to artefacts this build produces but that only exist once
+  # it is deployed: robots.txt points at the sitemap and at llms.txt, and both
+  # are 404 on the live site until the very commit that adds them is published.
+  # Checking them here would mean a PR can never introduce either file.
+  "^https://lemonfiber\\.app/sitemap-index\\.xml$",
+  "^https://lemonfiber\\.app/llms\\.txt$",
+  # Invite links reject unauthenticated HEAD requests.
+  "^https://discord\\.gg/",
+]
+
+exclude_loopback = true
+max_retries = 2
+accept = ["200", "206", "429"]

@@ -51,9 +51,37 @@ body {
 
 img,
 svg,
-picture {
+picture,
+video,
+canvas {
   max-width: 100%;
   display: block;
+}
+
+/* Form controls opt out of inheritance by default in every browser, which is
+ * why a <button> silently renders in the UA's system font. Both buttons on the
+ * site already set their own family, so this only affects markup added later —
+ * it is here so the next one does not have to remember. */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* The `hidden` attribute is only display:none in the UA stylesheet, so any
+ * author rule that sets display — a flex row, a grid item — silently outranks
+ * it and the element stays visible. Everything on this site that hides itself
+ * does so with `hidden` (the language switcher, the changelog filters), so it
+ * has to actually win. This is the one place !important is correct: the whole
+ * point of the attribute is that it overrides layout. */
+[hidden] {
+  display: none !important;
 }
 
 a {
@@ -117,6 +145,26 @@ samp {
 
 .section {
   padding-block: clamp(var(--space-8), 8vw, var(--space-10));
+}
+
+.prose {
+  max-width: var(--width-prose);
+}
+
+/* Section heading + standfirst. Three pages already declare these as scoped
+ * styles and those keep winning on specificity, so nothing existing moves —
+ * this is the default the pages added from here on will pick up, and the
+ * value the scoped copies can collapse into once they are reconciled. */
+.sec__h {
+  font-size: var(--size-display-xl);
+  max-width: 18ch;
+}
+
+.sec__lead {
+  margin-top: var(--space-4);
+  color: var(--text-muted);
+  max-width: 52ch;
+  font-size: 1.05rem;
 }
 
 .eyebrow {
@@ -224,8 +272,44 @@ samp {
   white-space: nowrap;
 }
 
+/* Tinted variants. `.badge` is lemonfiber's name for what the beatrax site
+ * calls `.pill`; the name stays because `.pill` is already taken by the
+ * scoped styles inside StatusPill.astro. */
+.badge--accent {
+  background: var(--accent-bg);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent-strong);
+}
+
+.badge--warn {
+  background: var(--warn-bg);
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+  color: var(--warn);
+}
+
+.badge--danger {
+  background: var(--danger-bg);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  color: var(--danger);
+}
+
+.badge--info {
+  background: var(--info-bg);
+  border-color: color-mix(in srgb, var(--info) 35%, transparent);
+  color: var(--info);
+}
+
+.badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
 .mono {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .visually-hidden {

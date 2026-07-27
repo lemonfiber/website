@@ -3,7 +3,7 @@
 // so the "runs in slices" switcher shows what `lemonfiber up <form>` truly boots.
 
 export const site = {
-  name: "lemonfiber",
+  name: "Lemonfiber",
   tagline: "Self-host your media — without becoming a sysadmin",
   description:
     "A fully open-source, self-hosted media automation stack that sets itself up, runs in the exact slice you need, and proves it's working instead of hoping.",
@@ -16,7 +16,24 @@ export const site = {
   license: "Hippocratic License 3.0",
   licenseUrl: "https://firstdonoharm.dev",
   by: { name: "NightWorks.io", url: "https://nightworks.io" },
+
+  // Path to the 1200×630 share card in public/, or undefined while none
+  // exists. og:image and twitter:card=summary_large_image are emitted only
+  // when this is set — a large-image card pointing at nothing is downgraded by
+  // every crawler, and an og:image pointing at a missing file is worse than no
+  // tag at all. The brand repo ships SVG only; crawlers do not accept SVG, so
+  // this needs a rendered PNG before it can be switched on.
+  ogImage: undefined as string | undefined,
 };
+
+// Sibling projects from the same workshop. Listed in the footer so the three
+// find each other; each is an independent product with its own org and site.
+// The blurbs are prose, so they live in the locale dictionaries under
+// `footer[key]` rather than here.
+export const siblings = [
+  { key: "beatrax", label: "Beatrax", url: "https://beatrax.app" },
+  { key: "happklaar", label: "Happklaar", url: "https://happklaar.nl" },
+];
 
 export const promises = [
   {

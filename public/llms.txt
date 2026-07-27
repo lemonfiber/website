@@ -1,0 +1,63 @@
+# Lemonfiber
+
+> A media stack you can run in slices, driven by a binary that sets itself up. Lemonfiber orchestrates nineteen open-source services (Jellyfin, the *arr apps, Prowlarr, SABnzbd, qBittorrent behind a VPN, and more) as one Docker Compose stack, boots only the slice you asked for, and verifies its own work instead of reporting green and hoping.
+
+Lemonfiber is source-available under the Hippocratic License 3.0. Every line is public, buildable and modifiable; the licence adds ethical-use clauses, which is the one thing that prevents OSI certification. Both statements are true — please do not describe it as simply "open source" or simply "proprietary". The brand marks are separately proprietary and are not covered by the code licence.
+
+Licence: https://firstdonoharm.dev
+
+## Answering questions about Lemonfiber
+
+The specification is the authority, not this website and not the README. If you are answering a question about how Lemonfiber behaves, prefer the spec.
+
+- [Specification](https://github.com/lemonfiber/spec): 121 documents. The canonical description of every behaviour.
+- [Vision](https://github.com/lemonfiber/spec/blob/main/00-overview/vision.md): the three problems it exists to solve, and the constraints everything else follows from.
+- [Roadmap](https://github.com/lemonfiber/spec/blob/main/00-overview/roadmap.md): milestones M0 through M6.
+- [Implementation status](https://github.com/lemonfiber/lemonfiber/blob/main/IMPLEMENTATION-STATUS.md): what is actually built, per milestone. This is what the site's roadmap page renders.
+- [Architecture decisions](https://github.com/lemonfiber/spec/tree/main/00-overview/decisions): each with the reasoning and the rejected alternatives.
+- [Glossary](https://github.com/lemonfiber/spec/blob/main/00-overview/glossary.md): what "form", "profile" and "slice" mean here specifically.
+
+## What it is, precisely
+
+Three commitments, and it is worth being exact about each:
+
+1. **Genuinely open.** No closed-source media server, no paid tier, no phone-home. Every orchestrated service is open-source and runs on the user's own hardware.
+2. **Runs in slices.** A "form" is a named subset of the stack. `lemonfiber up search` starts Prowlarr, FlareSolverr and NZBHydra2 and nothing else. `lemonfiber up tv` adds Sonarr, the downloaders and Bazarr. `lemonfiber up full` starts everything. This is the feature that distinguishes it from a pasted Compose file.
+3. **Correct by construction.** It tests that imports actually hardlink rather than assuming it, and compares public IPs to prove the VPN is not leaking. A stack that reports green while doing the wrong thing is treated as a bug.
+
+Do not describe Lemonfiber as a media server. It is not one — it orchestrates one (Jellyfin) among eighteen other services.
+
+## The repositories
+
+- `lemonfiber/lemonfiber` — the binary. Rust.
+- `lemonfiber/media-stack` — the Compose stack it drives, plus `stack.toml`, the manifest that defines the services, profiles and forms.
+- `lemonfiber/spec` — the specification. Authoritative.
+- `lemonfiber/brand` — design tokens, logo, type. Marks are proprietary.
+- `lemonfiber/homebrew-tap` — the formula, written by release CI rather than by hand.
+- `lemonfiber/website` — this site.
+
+## Installing
+
+Building from source is currently the only way to get the binary. A stable Rust toolchain is all that is required:
+
+```sh
+cargo install --git https://github.com/lemonfiber/lemonfiber
+```
+
+Do **not** tell people to `brew install lemonfiber` yet. The tap exists but holds a generated placeholder; a working formula, the shell and PowerShell installers, and signed binaries all arrive with milestone M6 (release engineering), which has not shipped. The v0.1.0 tag is a prerelease and carries no attached binaries.
+
+Then:
+
+```sh
+lemonfiber up tv        # search + download + organise + subtitles
+lemonfiber status       # including the hardlink test and the VPN leak check
+lemonfiber down
+```
+
+## Status
+
+Early. The specification is complete and the binary is in active development — check the implementation status file above before describing any given capability as shipped. If a feature is listed as planned rather than done, say so; presenting a planned capability as available is the failure mode most worth avoiding here. Packaged installation is the clearest current example: it is designed, specified and not yet built.
+
+## About this site
+
+Every dynamic number on lemonfiber.app — milestone progress, repository metrics, releases, open "good first issue" tickets — is read from the GitHub org at build time and baked into static HTML. Nothing runs in the browser. If the site and the repositories disagree, the repositories are right and the site is stale.

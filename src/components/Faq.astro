@@ -1,0 +1,138 @@
+---
+// Rendered from the spec's 90-appendix/faq.md, translated into Dutch by
+// question. Also emits FAQPage structured data — which is why the answers in
+// the spec are written to stand alone: a search result shows one answer with
+// none of its surrounding context.
+import { getFaq } from "../lib/github";
+import { faqNl, faqHeadingsNl } from "../i18n/faq";
+import { site } from "../data/site";
+import { copyFor, DEFAULT_LOCALE, type Locale } from "../i18n";
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const t = copyFor(locale);
+const specGroups = await getFaq();
+// Links to the spec repo root, not to the appendix file — that file does not
+// exist yet, and a link to a 404 is worse than a link to the tree it will land in.
+const specUrl = site.specUrl;
+
+// An English question with no Dutch entry falls back to English rather than
+// vanishing — a missing translation should be visible, not silently lossy.
+const groups = specGroups.map((g) => ({
+  heading: locale === "nl" ? (faqHeadingsNl[g.heading] ?? g.heading) : g.heading,
+  items: g.items.map((i) => (locale === "nl" ? (faqNl[i.q] ?? i) : i)),
+}));
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: groups.flatMap((g) =>
+    g.items.map((i) => ({
+      "@type": "Question",
+      name: i.q,
+      acceptedAnswer: { "@type": "Answer", text: i.a },
+    })),
+  ),
+};
+---
+
+<div class="faq">
+  {
+    groups.length === 0 ? (
+      <p class="faq__empty">
+        {t.faq.unavailable}{" "}
+        <a href={specUrl} target="_blank" rel="noopener">
+          {t.faq.source}
+        </a>
+      </p>
+    ) : (
+      groups.map((g) => (
+        <section class="faq__group">
+          <h2 class="faq__h">{g.heading}</h2>
+          {g.items.map((i) => (
+            <details class="faq__item">
+              <summary class="faq__q">{i.q}</summary>
+              <p class="faq__a">{i.a}</p>
+            </details>
+          ))}
+        </section>
+      ))
+    )
+  }
+
+  <p class="faq__source">
+    <a href={specUrl} target="_blank" rel="noopener">{t.faq.source} →</a>
+  </p>
+</div>
+
+{
+  groups.length > 0 && (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  )
+}
+
+<style>
+  .faq__group {
+    margin-top: var(--space-8);
+  }
+  .faq__h {
+    font-size: var(--size-display-l);
+    letter-spacing: var(--tracking-tight);
+    margin-bottom: var(--space-4);
+  }
+  .faq__item {
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .faq__q {
+    cursor: pointer;
+    padding: var(--space-4) var(--space-6) var(--space-4) 0;
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-tight);
+    list-style: none;
+    position: relative;
+  }
+  .faq__q::-webkit-details-marker {
+    display: none;
+  }
+  /* A rotating chevron drawn in CSS rather than an icon file — the arrow has
+     to track the open state, and a border triangle does that with no asset. */
+  .faq__q::after {
+    content: "";
+    position: absolute;
+    right: 0.35rem;
+    top: 1.55em;
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+    transform: translateY(-50%) rotate(45deg);
+    transition: transform 0.18s ease;
+  }
+  .faq__item[open] .faq__q::after {
+    transform: translateY(-50%) rotate(-135deg);
+  }
+  .faq__a {
+    padding: 0 var(--space-6) var(--space-5) 0;
+    color: var(--text-muted);
+    max-width: 72ch;
+  }
+  .faq__empty {
+    margin-top: var(--space-6);
+    color: var(--text-muted);
+  }
+  .faq__empty a,
+  .faq__source a {
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .faq__source {
+    margin-top: var(--space-8);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border-soft);
+    font-size: 0.9rem;
+  }
+</style>

@@ -3,6 +3,7 @@ import Base from "../layouts/Base.astro";
 import Console from "../components/Console.astro";
 import FormsSwitcher from "../components/FormsSwitcher.astro";
 import ServiceGrid from "../components/ServiceGrid.astro";
+import Pipeline from "../components/Pipeline.astro";
 import ProgressBar from "../components/ProgressBar.astro";
 import StatusPill from "../components/StatusPill.astro";
 import { getSiteData } from "../lib/github";
@@ -17,9 +18,35 @@ const promiseIcon: Record<string, string> = {
   slice: "✂️",
   shield: "🔒",
 };
+
+// The application itself, described for search engines. The version and date
+// come from the newest release rather than a number kept here, which would be
+// wrong the first time nobody remembered to change it.
+//
+// operatingSystem lists what the stack runs on, not what the binary is built
+// for — lemonfiber drives Docker, so the honest answer is "wherever Docker
+// runs" rather than a list of download targets.
+const application = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: site.name,
+  applicationCategory: "MultimediaApplication",
+  applicationSubCategory: "Self-hosted media automation",
+  operatingSystem: "macOS, Linux, Windows (via Docker)",
+  url: Astro.site?.href ?? "https://lemonfiber.app",
+  downloadUrl: `${site.githubOrg}/lemonfiber/releases`,
+  description: site.description,
+  inLanguage: "en-GB",
+  license: site.licenseUrl,
+  isAccessibleForFree: true,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+  ...(latest ? { softwareVersion: latest.tag, datePublished: latest.publishedAt } : {}),
+};
 ---
 
-<Base active="home" stars={data.stars}>
+<Base active="home" stars={data.stars} translated={["en"]}>
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(application)} />
+
   {/* ── Hero ─────────────────────────────────────────────── */}
   <section class="hero section">
     <div class="container hero__grid">
@@ -187,6 +214,21 @@ const promiseIcon: Record<string, string> = {
     </div>
   </section>
 
+  {/* ── The pipeline ─────────────────────────────────────── */}
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">How it flows</p>
+      <h2 class="sec__h">Four stages, one hop each.</h2>
+      <p class="sec__lead">
+        Media moves left to right. Torrents leave the machine only through the
+        VPN gateway — and Lemonfiber checks that, rather than assuming it.
+      </p>
+      <div class="pipeline__body">
+        <Pipeline />
+      </div>
+    </div>
+  </section>
+
   {/* ── What's inside ────────────────────────────────────── */}
   <section class="section">
     <div class="container">
@@ -235,6 +277,9 @@ const promiseIcon: Record<string, string> = {
 </Base>
 
 <style>
+  .pipeline__body {
+    margin-top: var(--space-6);
+  }
   .sec__h {
     font-size: var(--size-display-xl);
     max-width: 18ch;

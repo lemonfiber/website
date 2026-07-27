@@ -3,7 +3,7 @@ import Base from "../layouts/Base.astro";
 import Console from "../components/Console.astro";
 ---
 
-<Base title="Not found" description="That page isn't in the manifest.">
+<Base title="Not found" description="That page isn't in the manifest." translated={["en"]}>
   <section class="section nf">
     <div class="container nf__inner">
       <p class="eyebrow">404</p>
@@ -17,14 +17,16 @@ import Console from "../components/Console.astro";
           lines={[
             `<span class="c-prompt">$</span> <span class="c-cmd">lemonfiber up</span> <span class="c-flag">that-page</span>`,
             `<span class="c-warn">  !</span> Unknown form <span class="c-dim">· not found in stack.toml</span>`,
-            `<span class="c-dim">  Known routes: home · roadmap · transparency · contribute</span>`,
+            `<span class="c-dim">  Known routes: home · roadmap · install · changelog</span>`,
+            `<span class="c-dim">                transparency · contribute · faq · colophon</span>`,
           ]}
         />
       </div>
       <div class="nf__cta">
         <a class="btn btn--primary" href="/">Back home</a>
+        <a class="btn btn--ghost" href="/install">Install</a>
         <a class="btn btn--ghost" href="/roadmap">Roadmap</a>
-        <a class="btn btn--ghost" href="/transparency">Transparency</a>
+        <a class="btn btn--ghost" href="/faq">FAQ</a>
       </div>
     </div>
   </section>
