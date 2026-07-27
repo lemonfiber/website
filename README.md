@@ -17,6 +17,7 @@
   <img alt="Status" src="https://img.shields.io/badge/status-building-F0C419?labelColor=17160F">
   <img alt="Astro" src="https://img.shields.io/badge/built%20with-Astro-E07A17?labelColor=17160F">
   <img alt="Licence" src="https://img.shields.io/badge/licence-Hippocratic%203.0-17160F">
+  <a href="https://scorecard.dev/viewer/?uri=github.com/lemonfiber/website"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/lemonfiber/website/badge"></a>
 </p>
 
 ---
