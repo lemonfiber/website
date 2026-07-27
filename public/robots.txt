@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lemonfiber.app/sitemap-index.xml
+
+# What lemonfiber is, how to run it, and what it is not — written for
+# machines rather than reconstructed from the pages above.
+# https://lemonfiber.app/llms.txt
