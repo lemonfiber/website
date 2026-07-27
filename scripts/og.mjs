@@ -7,15 +7,17 @@
 // locale does not justify adding one.
 //
 // Usage: npm run build && node scripts/og.mjs
-import { readFileSync, writeFileSync, readdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, rmSync, mkdtempSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const CHROME =
   process.env.CHROME ??
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 const token = (name) => {
-  const m = new RegExp(`^\\s*${name}:\\s*([^;]+);`, "m").exec(
+  const m = new RegExp(String.raw`^\s*${name}:\s*([^;]+);`, "m").exec(
     readFileSync("src/styles/tokens.css", "utf8"),
   );
   if (!m) throw new Error(`token ${name} not found`);
@@ -66,19 +68,30 @@ const CARDS = {
 };
 
 // Rendered from dist/ so the @font-face URL resolves against the built assets.
+//
+// The intermediate render goes into a private 0700 directory rather than a
+// fixed /tmp path: a predictable name in a world-writable directory can be
+// pre-created as a symlink by any other local user, redirecting the write.
+const work = mkdtempSync(join(tmpdir(), "lf-og-"));
+
+// Absolute paths for both binaries, so neither resolves through PATH.
+const SIPS = "/usr/bin/sips";
+
 for (const [out, copy] of Object.entries(CARDS)) {
   const tmp = `dist/_og-tmp.html`;
   writeFileSync(tmp, card(copy));
   execFileSync(CHROME, [
     "--headless", "--disable-gpu", "--hide-scrollbars",
     "--force-device-scale-factor=2", "--window-size=1200,630",
-    "--virtual-time-budget=3000", `--screenshot=/tmp/_og-raw.png`,
+    "--virtual-time-budget=3000", `--screenshot=${join(work, "raw.png")}`,
     `file://${process.cwd()}/${tmp}`,
   ], { stdio: "ignore" });
   rmSync(tmp);
   // Chrome renders at 2× for crispness; the published card is exactly 1200×630.
-  execFileSync("sips", ["-z", "630", "1200", "/tmp/_og-raw.png", "--out", `public/${out}`], {
+  execFileSync(SIPS, ["-z", "630", "1200", join(work, "raw.png"), "--out", `public/${out}`], {
     stdio: "ignore",
   });
   console.log(`wrote public/${out}`);
 }
+
+rmSync(work, { recursive: true, force: true });
