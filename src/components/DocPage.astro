@@ -1,0 +1,283 @@
+---
+// One renderer for every data-driven content page. See lib/doc.ts for why the
+// pages are data rather than templates.
+import type { Doc } from "../lib/doc";
+
+interface Props {
+  doc: Doc;
+}
+
+const { doc } = Astro.props;
+
+// Where the slotted component goes. Explicit placement wins; otherwise it
+// lands after the prose, which is the right default for a page whose live
+// section is a closing appendix.
+const hasSlotMarker = doc.sections.some((s) => s.slot);
+---
+
+<article class="doc">
+  <header class="section doc__head">
+    <div class="container">
+      <p class="eyebrow">{doc.eyebrow}</p>
+      <h1 class="doc__h">{doc.title}</h1>
+      <p class="lead doc__lead">{doc.lead}</p>
+    </div>
+  </header>
+
+  <div class="container doc__body">
+    {
+      doc.sections.map((s) =>
+        s.slot ? (
+          <slot />
+        ) : (
+          <section
+            class:list={["ds", s.tone && s.tone !== "default" ? `ds--${s.tone}` : null]}
+          >
+            {s.heading && <h2 class="ds__h">{s.heading}</h2>}
+
+            {s.body?.map((p) => <p class="ds__p">{p}</p>)}
+
+            {s.list && (
+              <ul class="ds__list">
+                {s.list.map((li) => (
+                  <li>
+                    {li.title && <b>{li.title}</b>}
+                    {li.title ? " — " : ""}
+                    {li.body}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {s.cards && (
+              <div class="ds__cards">
+                {s.cards.map((c) => (
+                  <div class="ds__card card">
+                    {c.title && <h3 class="ds__card-h">{c.title}</h3>}
+                    <p class="ds__card-p">{c.body}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {s.code && (
+              <pre class="ds__code"><code>{s.code}</code></pre>
+            )}
+
+            {s.table && (
+              <div class="ds__tablewrap">
+                <table class="ds__table">
+                  <thead>
+                    <tr>{s.table.head.map((h) => <th scope="col">{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {s.table.rows.map((r) => (
+                      <tr>
+                        {r.map((cell, i) =>
+                          i === 0 ? <th scope="row">{cell}</th> : <td>{cell}</td>,
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {s.note && <p class="ds__note">{s.note}</p>}
+          </section>
+        ),
+      )
+    }
+
+    {!hasSlotMarker && <slot />}
+
+    {
+      doc.cta && (
+        <div class="doc__cta">
+          <a class="btn btn--primary" href={doc.cta.href}>
+            {doc.cta.label}
+          </a>
+          {doc.cta.secondaryHref && (
+            <a class="btn btn--ghost" href={doc.cta.secondaryHref}>
+              {doc.cta.secondaryLabel}
+            </a>
+          )}
+        </div>
+      )
+    }
+  </div>
+</article>
+
+<style>
+  .doc__head {
+    padding-bottom: var(--space-4);
+    background: radial-gradient(
+      110% 60% at 20% -20%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 60%
+    );
+  }
+  .doc__h {
+    font-size: var(--size-display-xl);
+    margin-top: var(--space-3);
+    max-width: 22ch;
+  }
+  .doc__lead {
+    margin-top: var(--space-4);
+    max-width: 62ch;
+  }
+  .doc__body {
+    padding-bottom: var(--space-9);
+  }
+  .ds {
+    margin-top: var(--space-8);
+  }
+  /* Measure is applied per text block so grids and tables can use the full
+     column width instead of inheriting a reading-width clamp. */
+  .ds__h,
+  .ds__p,
+  .ds__list,
+  .ds__note {
+    max-width: 72ch;
+  }
+  .ds--accent {
+    border-left: 2px solid var(--accent);
+    padding-left: var(--space-5);
+  }
+  .ds--warn {
+    border-left: 2px solid var(--warn);
+    padding-left: var(--space-5);
+  }
+  .ds__h {
+    font-size: var(--size-display-l);
+    letter-spacing: var(--tracking-tight);
+  }
+  .ds__p {
+    margin-top: var(--space-4);
+    color: var(--text-muted);
+  }
+  .ds__list {
+    margin-top: var(--space-4);
+    padding-left: 0;
+    list-style: none;
+    display: grid;
+    gap: var(--space-3);
+  }
+  .ds__list li {
+    position: relative;
+    padding-left: 1.5rem;
+    color: var(--text-muted);
+  }
+  .ds__list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .ds__list b {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+  .ds__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-5);
+  }
+  /* Cap at three so a six-card section reads as two tidy rows rather than
+     stretching into one very wide band on a large display. */
+  @media (min-width: 1000px) {
+    .ds__cards {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .ds__card {
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+  }
+  .ds__card-h {
+    font-size: 1.05rem;
+    letter-spacing: var(--tracking-tight);
+  }
+  .ds__card-p {
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  /* The terminal is dark in both themes, matching Console.astro. */
+  .ds__code {
+    margin-top: var(--space-5);
+    padding: var(--space-4) var(--space-5);
+    background: var(--term-bg);
+    color: var(--term-fg);
+    border: 1px solid var(--term-line);
+    border-radius: var(--radius-xl);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .ds__tablewrap {
+    margin-top: var(--space-5);
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+  }
+  .ds__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    min-width: 520px;
+  }
+  .ds__table th,
+  .ds__table td {
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  .ds__table thead th {
+    background: var(--surface-2);
+    font-size: var(--size-eyebrow);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--text-faint);
+    font-weight: var(--weight-semibold);
+  }
+  .ds__table tbody th {
+    font-weight: var(--weight-semibold);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .ds__table td {
+    color: var(--text-muted);
+  }
+  .ds__table tbody tr:last-child th,
+  .ds__table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .ds__note {
+    margin-top: var(--space-4);
+    font-size: 0.85rem;
+    color: var(--text-faint);
+  }
+  .doc__cta {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-soft);
+  }
+  @media (max-width: 640px) {
+    .ds__cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

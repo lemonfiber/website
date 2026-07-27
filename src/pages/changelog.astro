@@ -1,0 +1,43 @@
+---
+import Base from "../layouts/Base.astro";
+import Changelog from "../components/Changelog.astro";
+import { copyFor } from "../i18n";
+
+const t = copyFor("en");
+---
+
+<Base locale="en" active="changelog" title={t.changelog.title} description={t.changelog.lead}>
+  <header class="section doc__head">
+    <div class="container">
+      <p class="eyebrow">{t.changelog.eyebrow}</p>
+      <h1 class="doc__h">{t.changelog.title}</h1>
+      <p class="lead doc__lead">{t.changelog.lead}</p>
+    </div>
+  </header>
+  <div class="container doc__body">
+    <Changelog locale="en" />
+  </div>
+</Base>
+
+<style>
+  .doc__head {
+    padding-bottom: var(--space-4);
+    background: radial-gradient(
+      110% 60% at 20% -20%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 60%
+    );
+  }
+  .doc__h {
+    font-size: var(--size-display-xl);
+    margin-top: var(--space-3);
+    max-width: 22ch;
+  }
+  .doc__lead {
+    margin-top: var(--space-4);
+    max-width: 62ch;
+  }
+  .doc__body {
+    padding-bottom: var(--space-9);
+  }
+</style>

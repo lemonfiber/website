@@ -1,0 +1,162 @@
+---
+// The newest release's downloadable assets, grouped by the platform inferred
+// from each filename. Nothing here declares which platforms exist — the groups
+// are whatever the release workflow actually produced, so a new target appears
+// on this page without the site being touched, and a target that stopped being
+// built disappears rather than 404-ing.
+import { getSiteData } from "../lib/github";
+import { copyFor, DEFAULT_LOCALE, type Locale } from "../i18n";
+import { releaseDate, fileSize } from "../lib/format";
+import type { ReleaseAsset } from "../lib/types";
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const t = copyFor(locale);
+const data = await getSiteData();
+
+const release = data.latestRelease;
+const assets = release?.assets ?? [];
+
+const ORDER: ReleaseAsset["platform"][] = ["macos", "linux", "windows", "checksums"];
+const groups = ORDER.map((platform) => ({
+  platform,
+  label: t.install[platform as "macos" | "linux" | "windows" | "checksums"],
+  items: assets.filter((a) => a.platform === platform),
+})).filter((g) => g.items.length > 0);
+
+// Anything the filename did not place. Shown rather than hidden — an
+// unclassified asset is still a real download somebody may need.
+const other = assets.filter((a) => !a.platform);
+---
+
+<section class="ra">
+  <h2 class="ra__h">{t.install.binaries}</h2>
+
+  {
+    !release ? (
+      <p class="ra__none">{t.install.noRelease}</p>
+    ) : assets.length === 0 ? (
+      <p class="ra__none">
+        {t.install.noAssets}{" "}
+        <a href={release.url} target="_blank" rel="noopener">
+          {release.tag}
+        </a>
+      </p>
+    ) : (
+      <>
+        <p class="ra__meta">
+          <span class="mono ra__tag">{release.tag}</span>
+          <span class="ra__dot" aria-hidden="true">
+            ·
+          </span>
+          <time datetime={release.publishedAt}>{releaseDate(release.publishedAt, locale)}</time>
+        </p>
+
+        <div class="ra__groups">
+          {[...groups, ...(other.length ? [{ platform: undefined, label: t.install.other, items: other }] : [])].map(
+            (g) => (
+              <div class="ra__group card">
+                <h3 class="ra__gh">{g.label}</h3>
+                <ul class="ra__list">
+                  {g.items.map((a) => (
+                    <li>
+                      <a class="mono ra__file" href={a.url}>
+                        {a.name}
+                      </a>
+                      {a.size > 0 && <span class="ra__size mono">{fileSize(a.size)}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ),
+          )}
+        </div>
+
+        <p class="ra__note">{t.install.verifyNote}</p>
+      </>
+    )
+  }
+</section>
+
+<style>
+  .ra {
+    margin-top: var(--space-8);
+  }
+  .ra__h {
+    font-size: var(--size-display-l);
+    letter-spacing: var(--tracking-tight);
+    max-width: 72ch;
+  }
+  .ra__meta {
+    margin-top: var(--space-3);
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    font-size: var(--size-caption);
+    color: var(--text-faint);
+  }
+  .ra__tag {
+    color: var(--accent-strong);
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .ra__groups {
+    margin-top: var(--space-5);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-4);
+  }
+  .ra__group {
+    padding: var(--space-5);
+  }
+  .ra__gh {
+    font-size: var(--size-eyebrow);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--text-faint);
+    font-weight: 700;
+  }
+  .ra__list {
+    margin-top: var(--space-3);
+    padding-left: 0;
+    list-style: none;
+    display: grid;
+    gap: var(--space-2);
+  }
+  .ra__list li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .ra__file {
+    font-size: 0.8rem;
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    word-break: break-all;
+  }
+  .ra__size {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    flex: none;
+  }
+  .ra__none {
+    margin-top: var(--space-4);
+    color: var(--text-muted);
+  }
+  .ra__none a {
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .ra__note {
+    margin-top: var(--space-4);
+    font-size: 0.85rem;
+    color: var(--text-faint);
+    max-width: 72ch;
+  }
+</style>
