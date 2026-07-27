@@ -64,6 +64,7 @@
   --radius-sm: 3px;
   --radius-md: 6px;
   --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-icon: 22%;
   --radius-pill: 999px;
 
@@ -99,6 +100,27 @@
   --todo: #b7ad91;
   --todo-bg: #efe9d7;
 
+  /* Extra surface + line steps, for components that need a third level
+   * (a card raised above a card) or a line with more weight than --border. */
+  --surface-raised: #ffffff;
+  --border-strong: #c4b99c;
+
+  /* Message semantics. Every colour has a tinted background sibling so a
+   * callout never has to hand-mix one at the call site.
+   *
+   * NOTE: unlike the primitives above, these are picked here rather than
+   * mirrored from lemonfiber/brand — the brand repo has no message palette
+   * yet. When it grows one, replace these with references to it. --accent-bg
+   * and --warn are derived from existing brand values; --danger and --info
+   * are new and are the two to review first. */
+  --accent-bg: rgba(224, 122, 23, 0.12);
+  --warn: #a8730c;
+  --warn-bg: #faeecb;
+  --danger: #a32d1f;
+  --danger-bg: #f7dfd9;
+  --info: #3c6577;
+  --info-bg: #dde9ee;
+
   /* the terminal is always dark, in both themes */
   --term-bg: #1b1a12;
   --term-fg: #f3edd8;
@@ -132,6 +154,17 @@
   --todo: #6e6853;
   --todo-bg: #24221a;
 
+  --surface-raised: #282419;
+  --border-strong: #45423a;
+
+  --accent-bg: rgba(240, 154, 60, 0.14);
+  --warn: var(--lf-lemon-bright);
+  --warn-bg: rgba(255, 216, 77, 0.13);
+  --danger: #e8705c;
+  --danger-bg: rgba(232, 112, 92, 0.14);
+  --info: #7fb0c4;
+  --info-bg: rgba(127, 176, 196, 0.14);
+
   color-scheme: dark;
 }
 
@@ -158,6 +191,15 @@
     --wip-bg: #33261595;
     --todo: #6e6853;
     --todo-bg: #24221a;
+    --surface-raised: #282419;
+    --border-strong: #45423a;
+    --accent-bg: rgba(240, 154, 60, 0.14);
+    --warn: var(--lf-lemon-bright);
+    --warn-bg: rgba(255, 216, 77, 0.13);
+    --danger: #e8705c;
+    --danger-bg: rgba(232, 112, 92, 0.14);
+    --info: #7fb0c4;
+    --info-bg: rgba(127, 176, 196, 0.14);
     color-scheme: dark;
   }
 }
