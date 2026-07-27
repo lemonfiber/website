@@ -4,6 +4,13 @@
 // hand-built pages (index, roadmap, transparency, contribute) keep their own
 // templates; they can move into this file one at a time if that ever looks
 // worth doing.
+//
+// The install page states what works TODAY. Prebuilt binaries, the shell
+// installer and a working Homebrew formula all arrive with M6 (release
+// engineering), which has not shipped: the tap currently holds a generated
+// placeholder and v0.1.0 carries no attached binaries. Listing those as if
+// they worked would be the exact failure this site exists to prevent — a page
+// that says one thing while the repositories say another.
 
 import type { Doc } from "../lib/doc";
 
@@ -11,39 +18,35 @@ export const pagesEn: Record<string, Doc> = {
   install: {
     eyebrow: "Install",
     title: "Get Lemonfiber running",
-    lead: "One binary that sets up the stack, boots the slice you asked for, and checks its own work. Pick whichever channel you already trust.",
+    lead: "Early days: the binary builds from source and the stack runs from Compose. Packaged installs arrive with the first full release.",
     sections: [
       {
-        heading: "Homebrew",
+        heading: "Build the binary",
         body: [
-          "The formula is written by release CI rather than by hand, so the tap can never point at a version that was not actually published.",
+          "A stable Rust toolchain is all you need. This builds the same binary the release workflow will publish.",
         ],
-        code: "brew install lemonfiber/tap/lemonfiber",
+        code: "cargo install --git https://github.com/lemonfiber/lemonfiber",
       },
       {
-        heading: "Install script",
+        heading: "Run the stack",
         body: [
-          "Detects your platform, downloads the matching binary from the GitHub release, and verifies its checksum before moving it into place.",
-        ],
-        code: "curl -fsSL https://lemonfiber.app/install.sh | sh",
-        note: "Piping a script into a shell means trusting this domain and the release it fetches. If you would rather read it first, the script is the same file — download it, read it, then run it.",
-        tone: "warn",
-      },
-      {
-        heading: "Docker Compose",
-        body: [
-          "If you would rather not install anything on the host at all, the stack is a Compose project and Lemonfiber is the thing that drives it. Clone the stack and run it directly.",
+          "The stack is a Compose project, and Lemonfiber is the tool that drives it. You can also clone and run it directly — useful if you want to read exactly what is being started before anything starts it for you.",
         ],
         code: [
           "git clone https://github.com/lemonfiber/media-stack",
           "cd media-stack",
           "docker compose up -d",
         ].join("\n"),
+        note: "Downloads and media must sit under one mount point, or imports copy instead of hardlinking — slower, double the disk, and it breaks seeding. Lemonfiber checks this rather than assuming it.",
+        tone: "warn",
       },
       {
-        heading: "From source",
-        body: ["Rust toolchain, stable channel. Builds the same binary the release workflow does."],
-        code: ["cargo install --git https://github.com/lemonfiber/lemonfiber"].join("\n"),
+        heading: "Not yet: packaged installs",
+        body: [
+          "Homebrew, the shell and PowerShell installers, and signed binaries for macOS, Linux and Windows are all produced by the release pipeline, which is milestone M6 and has not shipped. The tap exists but holds a generated placeholder, so `brew install` will not work yet.",
+          "When M6 lands, the formula is written by CI rather than by hand and the binaries attach to the GitHub release — at which point they appear in the section below automatically, because this page reads them from the release rather than from a list kept here.",
+        ],
+        tone: "accent",
       },
       {
         // The live asset table renders here, from the newest GitHub release.
@@ -52,13 +55,13 @@ export const pagesEn: Record<string, Doc> = {
       {
         heading: "Then what",
         body: [
-          "Boot a slice rather than the whole stack. `lemonfiber up tv` starts search, download, organise and subtitles — nothing else. `lemonfiber up full` starts all nineteen services. `lemonfiber status` tells you whether it is genuinely working, including a hardlink test and a public-IP comparison that proves the VPN is not leaking.",
+          "Boot a slice rather than the whole stack. `lemonfiber up tv` starts search, download, organise and subtitles — nothing else. `lemonfiber up full` starts eighteen services. `lemonfiber doctor` tells you whether it is genuinely working, including a hardlink test and a public-IP comparison that proves the VPN is not leaking.",
         ],
-        code: ["lemonfiber up tv", "lemonfiber status", "lemonfiber down"].join("\n"),
+        code: ["lemonfiber up tv", "lemonfiber doctor", "lemonfiber down"].join("\n"),
       },
     ],
     cta: {
-      label: "See the roadmap",
+      label: "See what's shipped",
       href: "/roadmap",
       secondaryLabel: "Read the specification",
       secondaryHref: "https://github.com/lemonfiber/spec",

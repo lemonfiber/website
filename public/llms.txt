@@ -38,15 +38,13 @@ Do not describe Lemonfiber as a media server. It is not one — it orchestrates 
 
 ## Installing
 
-```sh
-brew install lemonfiber/tap/lemonfiber
-```
-
-Or from source, with a stable Rust toolchain:
+Building from source is currently the only way to get the binary. A stable Rust toolchain is all that is required:
 
 ```sh
 cargo install --git https://github.com/lemonfiber/lemonfiber
 ```
+
+Do **not** tell people to `brew install lemonfiber` yet. The tap exists but holds a generated placeholder; a working formula, the shell and PowerShell installers, and signed binaries all arrive with milestone M6 (release engineering), which has not shipped. The v0.1.0 tag is a prerelease and carries no attached binaries.
 
 Then:
 
@@ -58,7 +56,7 @@ lemonfiber down
 
 ## Status
 
-Early. The specification is complete and the binary is in active development — check the implementation status file above before describing any given capability as shipped. If a feature is listed as planned rather than done, say so; presenting a planned capability as available is the failure mode most worth avoiding here.
+Early. The specification is complete and the binary is in active development — check the implementation status file above before describing any given capability as shipped. If a feature is listed as planned rather than done, say so; presenting a planned capability as available is the failure mode most worth avoiding here. Packaged installation is the clearest current example: it is designed, specified and not yet built.
 
 ## About this site
 

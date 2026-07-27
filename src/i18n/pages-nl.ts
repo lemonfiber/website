@@ -2,6 +2,7 @@
 // and forgotten here is a build error rather than a 404 in one language.
 //
 // Commands, flags and form names are never translated — they are what you type.
+// See pages-en.ts for why the install page leads with building from source.
 
 import type { Doc } from "../lib/doc";
 import { pagesEn } from "./pages-en";
@@ -10,41 +11,35 @@ export const pagesNl: Record<keyof typeof pagesEn, Doc> = {
   install: {
     eyebrow: "Installeren",
     title: "Lemonfiber aan de praat krijgen",
-    lead: "Eén binary die de stack opzet, de vorm start waar je om vroeg, en zijn eigen werk controleert. Kies het kanaal dat je toch al vertrouwt.",
+    lead: "Nog vroeg: de binary bouw je vanaf de broncode en de stack draait vanuit Compose. Kant-en-klare installaties komen met de eerste volledige release.",
     sections: [
       {
-        heading: "Homebrew",
+        heading: "Bouw de binary",
         body: [
-          "De formule wordt door de release-CI geschreven en niet met de hand, dus de tap kan nooit naar een versie wijzen die niet daadwerkelijk is uitgebracht.",
+          "Een stabiele Rust-toolchain is genoeg. Dit bouwt dezelfde binary als de release-workflow straks publiceert.",
         ],
-        code: "brew install lemonfiber/tap/lemonfiber",
+        code: "cargo install --git https://github.com/lemonfiber/lemonfiber",
       },
       {
-        heading: "Installatiescript",
+        heading: "Draai de stack",
         body: [
-          "Herkent je platform, haalt de bijbehorende binary uit de GitHub-release en controleert de checksum voordat het bestand op zijn plek komt.",
-        ],
-        code: "curl -fsSL https://lemonfiber.app/install.sh | sh",
-        note: "Een script rechtstreeks in je shell pipen betekent dat je dit domein en de opgehaalde release vertrouwt. Wil je het liever eerst lezen: het script is hetzelfde bestand — download het, lees het, en voer het daarna uit.",
-        tone: "warn",
-      },
-      {
-        heading: "Docker Compose",
-        body: [
-          "Wil je liever helemaal niets op de host installeren: de stack is een Compose-project en Lemonfiber is wat het aanstuurt. Kloon de stack en draai hem rechtstreeks.",
+          "De stack is een Compose-project en Lemonfiber is het gereedschap dat hem aanstuurt. Je kunt hem ook zelf klonen en rechtstreeks draaien — handig als je eerst wilt lezen wat er precies gestart wordt.",
         ],
         code: [
           "git clone https://github.com/lemonfiber/media-stack",
           "cd media-stack",
           "docker compose up -d",
         ].join("\n"),
+        note: "Downloads en media moeten onder één mountpunt staan, anders kopieert een import in plaats van te hardlinken — trager, dubbel zoveel schijf, en het breekt seeding. Lemonfiber controleert dit in plaats van het aan te nemen.",
+        tone: "warn",
       },
       {
-        heading: "Vanaf de broncode",
+        heading: "Nog niet: kant-en-klare installaties",
         body: [
-          "Rust-toolchain, stable channel. Bouwt dezelfde binary als de release-workflow.",
+          "Homebrew, de shell- en PowerShell-installers en ondertekende binaries voor macOS, Linux en Windows komen allemaal uit de release-pijplijn. Dat is mijlpaal M6 en die is nog niet af. De tap bestaat wel, maar bevat een gegenereerde placeholder, dus `brew install` werkt nog niet.",
+          "Zodra M6 klaar is, wordt de formule door CI geschreven in plaats van met de hand en hangen de binaries aan de GitHub-release — waarna ze vanzelf hieronder verschijnen, omdat deze pagina ze uit de release leest en niet uit een lijst die hier wordt bijgehouden.",
         ],
-        code: ["cargo install --git https://github.com/lemonfiber/lemonfiber"].join("\n"),
+        tone: "accent",
       },
       {
         slot: true,
@@ -52,13 +47,13 @@ export const pagesNl: Record<keyof typeof pagesEn, Doc> = {
       {
         heading: "En dan",
         body: [
-          "Start een vorm in plaats van de hele stack. `lemonfiber up tv` start zoeken, downloaden, ordenen en ondertitels — verder niets. `lemonfiber up full` start alle negentien services. `lemonfiber status` vertelt je of het echt werkt, inclusief een hardlink-test en een vergelijking van publieke IP's die aantoont dat de VPN niet lekt.",
+          "Start een vorm in plaats van de hele stack. `lemonfiber up tv` start zoeken, downloaden, ordenen en ondertitels — verder niets. `lemonfiber up full` start achttien services. `lemonfiber doctor` vertelt je of het echt werkt, inclusief een hardlink-test en een vergelijking van publieke IP's die aantoont dat de VPN niet lekt.",
         ],
-        code: ["lemonfiber up tv", "lemonfiber status", "lemonfiber down"].join("\n"),
+        code: ["lemonfiber up tv", "lemonfiber doctor", "lemonfiber down"].join("\n"),
       },
     ],
     cta: {
-      label: "Bekijk de roadmap",
+      label: "Bekijk wat er af is",
       href: "/nl/roadmap",
       secondaryLabel: "Lees de specificatie",
       secondaryHref: "https://github.com/lemonfiber/spec",
