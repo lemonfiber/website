@@ -17,9 +17,6 @@ on:
   repository_dispatch:
     types: [rebuild-site]
 
-permissions:
-  contents: read
-
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -27,6 +24,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -35,7 +34,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # --ignore-scripts: a dependency's install hook would otherwise run here
+      # with the job token in the environment, which is the shape most
+      # supply-chain attacks take. esbuild is the only dependency in the tree
+      # that declares one, and it resolves its platform binary through
+      # optionalDependencies, so the build does not need it — verified by
+      # building from a clean --ignore-scripts install.
+      - run: npm ci --ignore-scripts
       - name: Build (fetches live org data)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
