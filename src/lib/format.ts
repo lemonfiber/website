@@ -1,5 +1,7 @@
 // Small presentational helpers. Pure, build-time only.
 
+import type { Locale } from "../i18n";
+
 export function relativeTime(iso?: string): string {
   if (!iso) return "";
   const then = new Date(iso).getTime();
@@ -29,11 +31,46 @@ export function statusGlyph(s: string): string {
   return STATUS_GLYPH[s] ?? "○";
 }
 
+// Kept as the English table so `statusLabel(s)` with no locale returns exactly
+// what it always has. The Dutch column is additive.
 const STATUS_LABEL: Record<string, string> = {
   done: "Done",
   partial: "In progress",
   todo: "Planned",
 };
-export function statusLabel(s: string): string {
-  return STATUS_LABEL[s] ?? "Planned";
+
+const STATUS_LABEL_NL: Record<string, string> = {
+  done: "Klaar",
+  partial: "Onderweg",
+  todo: "Gepland",
+};
+
+export function statusLabel(s: string, locale: Locale = "en"): string {
+  const table = locale === "nl" ? STATUS_LABEL_NL : STATUS_LABEL;
+  return table[s] ?? table.todo;
+}
+
+// Dates on this site are release dates, so day precision is enough, and the
+// month is spelled out to sidestep the DD/MM vs MM/DD ambiguity between
+// locales. Formatted in UTC so the rendered date cannot shift depending on
+// which timezone the build machine happened to run in.
+export function releaseDate(iso: string, locale: Locale = "en"): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat(locale === "nl" ? "nl-NL" : "en-GB", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+// Byte size for release assets, in the units a download page actually wants.
+export function fileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  const mb = bytes / 1_048_576;
+  if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
+  if (mb >= 10) return `${Math.round(mb)} MB`;
+  if (mb >= 1) return `${mb.toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }

@@ -8,6 +8,10 @@ export interface Deliverable {
   status: DeliverableStatus;
   spec?: string;
   note?: string;
+  // True for a section heading that groups the rows beneath it rather than
+  // being a work item in its own right. Excluded from every count — including
+  // headings in the total would quietly inflate progress.
+  group?: boolean;
 }
 
 export interface Milestone {
@@ -45,12 +49,28 @@ export interface Issue {
   createdAt: string;
 }
 
+export interface ReleaseAsset {
+  name: string;
+  url: string;
+  size: number;
+  // Which platform the filename implies. Derived, not declared — the release
+  // workflow names the assets, and this site should follow whatever it
+  // actually produced rather than carry its own list that can fall out of date.
+  platform?: "macos" | "linux" | "windows" | "checksums";
+}
+
 export interface Release {
   repo: string;
   tag: string;
   name: string;
   url: string;
   publishedAt: string;
+  // Pre-1.0, every release is a prerelease. Hiding them would leave the
+  // changelog empty while real releases exist, so they are shown and marked.
+  prerelease?: boolean;
+  // Both optional so a seed entry that carries neither stays valid.
+  body?: string;
+  assets?: ReleaseAsset[];
 }
 
 export interface SiteData {
@@ -61,6 +81,9 @@ export interface SiteData {
   milestones: Milestone[];
   goodFirstIssues: Issue[];
   releases: Release[];
+  // Newest published release across the org, for the install page's headline
+  // version. Optional because a fresh org genuinely has none.
+  latestRelease?: Release;
   progress: {
     doneMilestones: number;
     totalMilestones: number;
