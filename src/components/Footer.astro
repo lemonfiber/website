@@ -1,30 +1,42 @@
 ---
-import { site } from "../data/site";
+import { site, siblings } from "../data/site";
+import { copyFor, localePath, DEFAULT_LOCALE, type Locale } from "../i18n";
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const t = copyFor(locale);
 
 const cols = [
   {
-    title: "Project",
+    title: t.footer.project,
     links: [
-      { label: "Home", href: "/" },
-      { label: "Roadmap", href: "/roadmap" },
-      { label: "Transparency", href: "/transparency" },
-      { label: "Contribute", href: "/contribute" },
+      { label: t.nav.home, href: localePath(locale, "/") },
+      { label: t.nav.roadmap, href: localePath(locale, "/roadmap") },
+      { label: t.nav.install, href: localePath(locale, "/install") },
+      { label: t.nav.changelog, href: localePath(locale, "/changelog") },
+      { label: t.nav.transparency, href: localePath(locale, "/transparency") },
+      { label: t.nav.contribute, href: localePath(locale, "/contribute") },
+      { label: t.nav.faq, href: localePath(locale, "/faq") },
+      { label: t.nav.colophon, href: localePath(locale, "/colophon") },
     ],
   },
   {
-    title: "Source",
+    title: t.footer.source,
     links: [
-      { label: "Specification", href: site.specUrl },
+      { label: t.cta.spec, href: site.specUrl },
       { label: "lemonfiber (binary)", href: "https://github.com/lemonfiber/lemonfiber" },
       { label: "media-stack", href: "https://github.com/lemonfiber/media-stack" },
-      { label: "All repos", href: site.githubOrg },
+      { label: t.footer.org, href: site.githubOrg },
     ],
   },
   {
-    title: "Community",
+    title: t.footer.community,
     links: [
       { label: "Discord", href: site.discord },
-      { label: "Good first issues", href: "https://github.com/lemonfiber/lemonfiber/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22" },
+      { label: t.cta.goodFirstIssues, href: "https://github.com/lemonfiber/lemonfiber/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22" },
       { label: "Code of Conduct", href: "https://github.com/lemonfiber/.github/blob/main/CODE_OF_CONDUCT.md" },
       { label: "Security", href: "https://github.com/lemonfiber/.github/blob/main/SECURITY.md" },
     ],
@@ -35,14 +47,14 @@ const cols = [
 <footer class="ft">
   <div class="container ft__inner">
     <div class="ft__brand">
-      <a href="/" class="ft__logo" aria-label="lemonfiber home">
+      <a href={localePath(locale, "/")} class="ft__logo" aria-label="Lemonfiber home">
         <img src="/brand/mark-small.svg" alt="" width="40" height="40" />
-        <span>lemonfiber</span>
+        <span>Lemonfiber</span>
       </a>
-      <p class="ft__tag">{site.tagline}.</p>
+      <p class="ft__tag">{t.meta.tagline}.</p>
       <p class="ft__lic">
-        <a href={site.licenseUrl} target="_blank" rel="noopener">{site.license}</a> —
-        ethical, source-available. © {new Date().getFullYear()} {site.by.name}.
+        <a href={site.licenseUrl} target="_blank" rel="noopener">{t.footer.license}</a> —
+        {t.footer.sourceAvailable}. © {new Date().getFullYear()} {site.by.name}.
       </p>
     </div>
 
@@ -63,11 +75,27 @@ const cols = [
           </div>
         ))
       }
+
+      <div class="ft__col">
+        <h5>{t.footer.alsoFrom}</h5>
+        <ul>
+          {
+            siblings.map((s) => (
+              <li>
+                <a class="sib" href={s.url} target="_blank" rel="noopener">
+                  <b>{s.label}</b>
+                  <span>{t.footer[s.key as "beatrax" | "happklaar"]}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
     </nav>
   </div>
 
   <div class="container ft__base">
-    <span class="ft__built">Built in the open — this page is generated from the org's repos.</span>
+    <span class="ft__built">{t.footer.builtInOpen}</span>
     <a class="ft__nw" href={site.by.url} target="_blank" rel="noopener" aria-label="NightWorks.io">
       <img class="nw-dark" src="/brand/nightworks-dark.png" alt="NightWorks.io" height="18" />
       <img class="nw-white" src="/brand/nightworks-white.png" alt="NightWorks.io" height="18" />
@@ -84,8 +112,10 @@ const cols = [
   }
   .ft__inner {
     display: grid;
-    grid-template-columns: 1.4fr 2fr;
-    gap: var(--space-8);
+    /* The link block went from three columns to four, so the brand column
+       gives up some width rather than squeezing the labels. */
+    grid-template-columns: 1fr 2.4fr;
+    gap: var(--space-7);
   }
   .ft__logo {
     display: inline-flex;
@@ -113,7 +143,7 @@ const cols = [
   }
   .ft__cols {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--space-5);
   }
   .ft__col h5 {
@@ -135,6 +165,18 @@ const cols = [
   }
   .ft__col a:hover {
     color: var(--accent-strong);
+  }
+  .sib {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.35;
+  }
+  .sib b {
+    font-weight: 700;
+  }
+  .sib span {
+    font-size: 0.74rem;
+    color: var(--text-faint);
   }
   .ft__base {
     margin-top: var(--space-8);
