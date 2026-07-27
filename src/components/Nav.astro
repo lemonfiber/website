@@ -4,6 +4,8 @@ import { compact } from "../lib/format";
 import {
   copyFor,
   localePath,
+  pathFor,
+  isTranslated,
   stripLocale,
   LOCALES,
   LOCALE_LABELS,
@@ -22,14 +24,24 @@ const { locale = DEFAULT_LOCALE, translated = [...LOCALES], stars, active } = As
 const t = copyFor(locale);
 const here = stripLocale(Astro.url.pathname);
 
-const links = [
-  { href: localePath(locale, "/"), label: t.nav.home, key: "home" },
-  { href: localePath(locale, "/roadmap"), label: t.nav.roadmap, key: "roadmap" },
-  { href: localePath(locale, "/install"), label: t.nav.install, key: "install" },
-  { href: localePath(locale, "/transparency"), label: t.nav.transparency, key: "transparency" },
-  { href: localePath(locale, "/contribute"), label: t.nav.contribute, key: "contribute" },
-  { href: localePath(locale, "/faq"), label: t.nav.faq, key: "faq" },
+// Transparency lives in the footer: it is a reference page for someone already
+// checking the project's claims, not a step on the way in. Dropping it also
+// keeps the row short enough to survive the longer Dutch labels.
+const routes = [
+  { route: "/", label: t.nav.home, key: "home" },
+  { route: "/roadmap", label: t.nav.roadmap, key: "roadmap" },
+  { route: "/install", label: t.nav.install, key: "install" },
+  { route: "/contribute", label: t.nav.contribute, key: "contribute" },
+  { route: "/faq", label: t.nav.faq, key: "faq" },
 ];
+
+// A link to a page with no translation stays on the English URL and says so, so
+// a screen reader and a browser both know the language is about to change.
+const links = routes.map((r) => ({
+  ...r,
+  href: pathFor(locale, r.route),
+  foreign: locale !== "en" && !isTranslated(r.route),
+}));
 ---
 
 <header class="nav">
@@ -44,6 +56,8 @@ const links = [
         links.map((l) => (
           <a
             href={l.href}
+            hreflang={l.foreign ? "en" : undefined}
+            lang={l.foreign ? "en" : undefined}
             class:list={["nav__link", { "is-active": active === l.key }]}
             aria-current={active === l.key ? "page" : undefined}
           >
@@ -113,6 +127,8 @@ const links = [
           <a
             class:list={["navpanel__link", { "is-active": active === l.key }]}
             href={l.href}
+            hreflang={l.foreign ? "en" : undefined}
+            lang={l.foreign ? "en" : undefined}
             aria-current={active === l.key ? "page" : undefined}
           >
             {l.label}
@@ -161,7 +177,7 @@ const links = [
 
     // Growing past the breakpoint reveals the desktop nav; leaving the panel
     // open would stack a second copy of the same links underneath it.
-    window.matchMedia("(min-width: 861px)").addEventListener("change", (e) => {
+    window.matchMedia("(min-width: 901px)").addEventListener("change", (e) => {
       if (e.matches) setOpen(false);
     });
   })();
@@ -364,7 +380,10 @@ const links = [
     color: var(--text);
   }
 
-  @media (max-width: 860px) {
+  /* Measured, not guessed: with five links the whole row needs ~750px in
+     Dutch (the wider of the two) plus ~120px once the brand word is shown.
+     900px collapses just below that, with headroom for a longer label later. */
+  @media (max-width: 900px) {
     .nav__inner {
       gap: var(--space-3);
     }
@@ -384,7 +403,7 @@ const links = [
       display: none;
     }
   }
-  @media (min-width: 861px) {
+  @media (min-width: 901px) {
     .navpanel {
       display: none;
     }

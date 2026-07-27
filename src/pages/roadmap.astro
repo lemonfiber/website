@@ -13,15 +13,15 @@ const data = await getSiteData();
   active="roadmap"
   stars={data.stars}
   title="Roadmap"
-  description="Sequenced milestones, live from the spec and implementation status — no hand-editing." translated={["en"]}>
+  description="Sequenced milestones, live from the spec and implementation status — no hand-editing.">
   <section class="section head">
     <div class="container">
       <p class="eyebrow">The roadmap</p>
       <h1 class="head__h">Build the thing being wrapped, before the wrapper.</h1>
       <p class="lead head__lead">
         Every milestone is sequenced to keep a working artifact at each step.
-        Status here is derived from
-        <a href={`${site.githubOrg}/lemonfiber/blob/main/IMPLEMENTATION-STATUS.md`} target="_blank" rel="noopener">IMPLEMENTATION-STATUS.md</a>
+        Status here is derived from{" "}
+        <a href={`${site.githubOrg}/lemonfiber/blob/main/IMPLEMENTATION-STATUS.md`} target="_blank" rel="noopener">IMPLEMENTATION-STATUS.md</a>{" "}
         — when the code moves, this page moves.
       </p>
       <div class="head__bar card">
@@ -81,9 +81,9 @@ const data = await getSiteData();
   <section class="section">
     <div class="container foot-note card">
       <p>
-        Want the full argument behind each decision?
-        <a href={site.roadmapUrl} target="_blank" rel="noopener">The canonical roadmap</a>
-        and the <a href={site.specUrl} target="_blank" rel="noopener">795-requirement spec</a>
+        Want the full argument behind each decision?{" "}
+        <a href={site.roadmapUrl} target="_blank" rel="noopener">The canonical roadmap</a>{" "}
+        and the <a href={site.specUrl} target="_blank" rel="noopener">795-requirement spec</a>{" "}
         spell out the <em>why</em> for every one.
       </p>
     </div>
@@ -106,7 +106,7 @@ const data = await getSiteData();
   .head__lead a {
     color: var(--accent-strong);
     text-decoration: underline;
-    text-underline-offset: 2px;
+    text-underline-offset: 0.18em;
   }
   .head__bar {
     margin-top: var(--space-6);
@@ -285,7 +285,7 @@ const data = await getSiteData();
   .foot-note a {
     color: var(--accent-strong);
     text-decoration: underline;
-    text-underline-offset: 2px;
+    text-underline-offset: 0.18em;
   }
 
   @media (max-width: 640px) {

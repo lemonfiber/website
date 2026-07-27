@@ -29,7 +29,7 @@ export const nl: Copy = {
     contribute: "Meedoen",
     install: "Installeren",
     changelog: "Wijzigingen",
-    faq: "Veelgestelde vragen",
+    faq: "FAQ",
     colophon: "Colofon",
     skip: "Naar de inhoud",
     theme: "Wissel kleurthema",

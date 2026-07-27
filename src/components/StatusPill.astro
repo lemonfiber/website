@@ -1,15 +1,18 @@
 ---
 import { statusGlyph, statusLabel } from "../lib/format";
+import { DEFAULT_LOCALE, type Locale } from "../i18n";
+
 interface Props {
   status: "done" | "partial" | "todo";
+  locale?: Locale;
   text?: string;
 }
-const { status, text } = Astro.props;
+const { status, locale = DEFAULT_LOCALE, text } = Astro.props;
 ---
 
 <span class:list={["pill", `pill--${status}`]}>
   <span class="pill__glyph" aria-hidden="true">{statusGlyph(status)}</span>
-  {text ?? statusLabel(status)}
+  {text ?? statusLabel(status, locale)}
 </span>
 
 <style>

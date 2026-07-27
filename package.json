@@ -2,7 +2,7 @@
   "name": "@lemonfiber/website",
   "version": "0.1.0",
   "private": true,
-  "description": "The lemonfiber frontpage — a build-in-the-open site driven by the GitHub org.",
+  "description": "The lemonfiber frontpage \u2014 a build-in-the-open site driven by the GitHub org.",
   "type": "module",
   "license": "Hippocratic-3.0",
   "engines": {
@@ -14,7 +14,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "sync": "astro sync"
+    "sync": "astro sync",
+    "og": "node scripts/og.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "5.2.6",
