@@ -1,11 +1,10 @@
-# Repo-specific CI: the site type-checks, spell-checks and actually builds.
-# The build fetches live org data; if GitHub is unreachable it falls back to the
-# committed seed, so this job proves the site compiles either way. REPO-R (website).
+# PR check: the site type-checks and actually builds. On push to main the deploy
+# workflow builds and ships, so this runs on pull_request only to avoid a
+# redundant second build. The build fetches live org data; if GitHub is
+# unreachable it falls back to the committed seed, so it compiles either way.
 name: build
 on:
   pull_request:
-  push:
-    branches: [main]
 permissions:
   contents: read
 
@@ -16,7 +15,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: npm
