@@ -1,0 +1,574 @@
+---
+import Console from "./Console.astro";
+import FormsSwitcher from "./FormsSwitcher.astro";
+import ServiceGrid from "./ServiceGrid.astro";
+import Pipeline from "./Pipeline.astro";
+import ProgressBar from "./ProgressBar.astro";
+import StatusPill from "./StatusPill.astro";
+import { getSiteData } from "../lib/github";
+import { homeCopy, copyFor, localePath, DEFAULT_LOCALE, type Locale } from "../i18n";
+import { promises, site, services } from "../data/site";
+import { relativeTime } from "../lib/format";
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const t = homeCopy(locale);
+const chrome = copyFor(locale);
+const siteDescription = chrome.meta.description;
+const path = (p: string) => localePath(locale, p);
+
+const data = await getSiteData();
+const inProgress = data.milestones.filter((m) => m.status === "partial");
+const latest = data.releases[0];
+const promiseIcon: Record<string, string> = {
+  lemon: "🍋",
+  slice: "✂️",
+  shield: "🔒",
+};
+
+// The application itself, described for search engines. The version and date
+// come from the newest release rather than a number kept here, which would be
+// wrong the first time nobody remembered to change it.
+//
+// operatingSystem lists what the stack runs on, not what the binary is built
+// for — lemonfiber drives Docker, so the honest answer is "wherever Docker
+// runs" rather than a list of download targets.
+const application = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: site.name,
+  applicationCategory: "MultimediaApplication",
+  applicationSubCategory: "Self-hosted media automation",
+  operatingSystem: "macOS, Linux, Windows (via Docker)",
+  url: Astro.site?.href ?? "https://lemonfiber.app",
+  downloadUrl: `${site.githubOrg}/lemonfiber/releases`,
+  description: siteDescription,
+  inLanguage: locale === "nl" ? "nl-NL" : "en-GB",
+  license: site.licenseUrl,
+  isAccessibleForFree: true,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+  ...(latest ? { softwareVersion: latest.tag, datePublished: latest.publishedAt } : {}),
+};
+---
+
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(application)} />
+
+  {/* ── Hero ─────────────────────────────────────────────── */}
+  <section class="hero section">
+    <div class="container hero__grid">
+      <div class="hero__copy">
+        <p class="eyebrow">Spec-first · built in the open</p>
+        <h1 class="hero__title">
+          {t.hero.titleLead} <span class="hero__accent">{t.hero.titleAccent}</span>
+        </h1>
+        <p class="lead hero__lead">
+          {siteDescription}
+        </p>
+        <div class="hero__cta">
+          <a class="btn btn--primary" href={site.discord} target="_blank" rel="noopener">
+            {t.hero.ctaPrimary}
+          </a>
+          <a class="btn btn--ghost" href={path("/roadmap")}> {t.hero.ctaSecondary} </a>
+        </div>
+        <div class="hero__proof">
+          <StatusPill status="partial" locale={locale} text={t.hero.statusPill} />
+          <span class="hero__proof-sep">·</span>
+          <span class="mono hero__proof-txt">
+            {data.progress.doneMilestones}/{data.progress.totalMilestones} {t.hero.milestones} ·
+            {data.progress.pct}% {t.hero.ofDeliverables}
+          </span>
+        </div>
+      </div>
+
+      <div class="hero__demo">
+        <Console
+          title={t.hero.consoleTitle}
+          lines={[
+            `<span class="c-prompt">$</span> <span class="c-cmd">lemonfiber</span>`,
+            `<span class="c-box">  ┌─ lemonfiber ───────────────────────────────┐</span>`,
+            `<span class="c-box">  │</span>  No configuration found.                   <span class="c-box">│</span>`,
+            `<span class="c-box">  │</span>  Run first-time setup?             <span class="c-warn">[Y/n]</span>   <span class="c-box">│</span>`,
+            `<span class="c-box">  └────────────────────────────────────────────┘</span>`,
+            ``,
+            `<span class="c-prompt">$</span> <span class="c-cmd">lemonfiber up tv</span>  <span class="c-dim"># search → download → organise → subtitle</span>`,
+            `<span class="c-ok">  ✓</span> <span class="c-dim">8 services healthy · VPN isolating · hardlinks verified</span>`,
+          ]}
+        />
+      </div>
+    </div>
+  </section>
+
+  {/* ── Live status strip ────────────────────────────────── */}
+  <section class="strip">
+    <div class="container strip__grid">
+      <div class="strip__lead">
+        <p class="eyebrow">{t.strip.eyebrow}</p>
+        <h2 class="strip__h">{t.strip.title}</h2>
+        <p class="strip__sub">
+          {t.strip.sub} {data.live ? t.strip.fresh : t.strip.snapshot}
+        </p>
+      </div>
+      <div class="strip__stats">
+        <div class="strip__bar">
+          <ProgressBar pct={data.progress.pct} status="partial" label={`${data.progress.doneDeliverables} ${t.strip.of} ${data.progress.totalDeliverables} ${t.strip.barLabel}`} />
+        </div>
+        <div class="strip__cells">
+          <div class="cell">
+            <span class="cell__n">{data.progress.doneMilestones}/{data.progress.totalMilestones}</span>
+            <span class="cell__l">{t.strip.milestonesDone}</span>
+          </div>
+          <div class="cell">
+            <span class="cell__n">{services.length}</span>
+            <span class="cell__l">{t.strip.servicesWired}</span>
+          </div>
+          <div class="cell">
+            <span class="cell__n">{data.repos.length}</span>
+            <span class="cell__l">{t.strip.publicRepos}</span>
+          </div>
+          <div class="cell">
+            <span class="cell__n">{latest ? latest.tag : "0.1.0"}</span>
+            <span class="cell__l">{latest ? `${relativeTime(latest.publishedAt)}` : t.strip.inDev}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    {
+      inProgress.length > 0 && (
+        <div class="container strip__now">
+          <span class="strip__now-label">{t.strip.inProgressNow}</span>
+          {inProgress.map((m) => (
+            <a class="strip__now-item" href={`${path("/roadmap")}#${m.id}`}>
+              <b>{m.id}</b> {m.title} <span class="mono">{m.pct}%</span>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </section>
+
+  {/* ── Promises ─────────────────────────────────────────── */}
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">{t.promises.eyebrow}</p>
+      <h2 class="sec__h">{t.promises.title}</h2>
+      <div class="promises">
+        {
+          promises.map((p) => (
+            <article class="promise card">
+              <span class="promise__icon" aria-hidden="true">{promiseIcon[p.icon]}</span>
+              <h3 class="promise__title">{t.promiseCards[p.icon]?.title ?? p.title}</h3>
+              <p class="promise__body">{t.promiseCards[p.icon]?.body ?? p.body}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  {/* ── The problem ──────────────────────────────────────── */}
+  <section class="section problem">
+    <div class="container problem__grid">
+      <div>
+        <p class="eyebrow">{t.problem.eyebrow}</p>
+        <h2 class="sec__h">{t.problem.title}</h2>
+        <p class="problem__p">{t.problem.body}</p>
+        <p class="problem__lead">{t.problem.lead}</p>
+        <ul class="problem__list">
+          {t.problem.points.map((pt) => (
+            <li>
+              <b>{pt.strong}</b>
+              {pt.rest}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div class="problem__demo">
+        <Console
+          title={t.problem.consoleTitle}
+          lines={[
+            `<span class="c-prompt">$</span> <span class="c-cmd">lemonfiber doctor</span>`,
+            `<span class="c-ok">  ✓</span> ${t.problem.consoleDocker} <span class="c-dim">· Compose v2.29</span>`,
+            `<span class="c-ok">  ✓</span> ${t.problem.consoleHardlinks} <span class="c-dim">(inode reused)</span>`,
+            `<span class="c-ok">  ✓</span> ${t.problem.consoleVpn} <span class="c-dim">— gluetun 149.x ≠ host 84.x</span>`,
+            `<span class="c-ok">  ✓</span> ${t.problem.consoleBound}`,
+            ``,
+            `<span class="c-dim">  ${t.problem.consoleNone}</span>`,
+          ]}
+        />
+      </div>
+    </div>
+  </section>
+
+  {/* ── Runs in slices ───────────────────────────────────── */}
+  <section class="section slices">
+    <div class="container">
+      <p class="eyebrow">{t.slices.eyebrow}</p>
+      <h2 class="sec__h">{t.slices.title}</h2>
+      <p class="sec__lead">{t.slices.lead}</p>
+      <div class="slices__body">
+        <FormsSwitcher locale={locale} />
+      </div>
+    </div>
+  </section>
+
+  {/* ── The pipeline ─────────────────────────────────────── */}
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">{t.pipeline.eyebrow}</p>
+      <h2 class="sec__h">{t.pipeline.title}</h2>
+      <p class="sec__lead">{t.pipeline.lead}</p>
+      <div class="pipeline__body">
+        <Pipeline locale={locale} />
+      </div>
+    </div>
+  </section>
+
+  {/* ── What's inside ────────────────────────────────────── */}
+  <section class="section">
+    <div class="container">
+      <div class="inside__head">
+        <div>
+          <p class="eyebrow">{t.inside.eyebrow}</p>
+          <h2 class="sec__h">{t.inside.title}</h2>
+        </div>
+        <p class="inside__sub">{t.inside.sub}</p>
+      </div>
+      <ServiceGrid locale={locale} />
+    </div>
+  </section>
+
+  {/* ── Household ────────────────────────────────────────── */}
+  <section class="section household">
+    <div class="container household__inner">
+      <p class="eyebrow">{t.household.eyebrow}</p>
+      <h2 class="sec__h">{t.household.title}</h2>
+      <p class="household__p">
+        {t.household.bodyLead}
+        <b>{t.household.bodyStrong}</b>{t.household.bodyRest}
+      </p>
+    </div>
+  </section>
+
+  {/* ── CTA ──────────────────────────────────────────────── */}
+  <section class="section">
+    <div class="container cta">
+      <h2 class="cta__h">{t.cta.title}</h2>
+      <p class="cta__p">{t.cta.body}</p>
+      <div class="cta__row">
+        <a class="btn btn--primary" href={site.discord} target="_blank" rel="noopener">{t.cta.discord}</a>
+        <a class="btn btn--ghost" href={site.specUrl} target="_blank" rel="noopener">{t.cta.spec}</a>
+        <a class="btn btn--ghost" href={path("/contribute")}>{t.cta.contribute}</a>
+      </div>
+    </div>
+  </section>
+
+<style>
+  .pipeline__body {
+    margin-top: var(--space-6);
+  }
+  .sec__h {
+    font-size: var(--size-display-xl);
+    max-width: 18ch;
+  }
+  .sec__lead {
+    margin-top: var(--space-4);
+    color: var(--text-muted);
+    max-width: 52ch;
+    font-size: 1.05rem;
+  }
+
+  /* Hero */
+  .hero {
+    padding-top: var(--space-8);
+    background:
+      radial-gradient(120% 80% at 85% -10%, color-mix(in srgb, var(--lf-lemon) 22%, transparent), transparent 60%),
+      radial-gradient(90% 60% at 0% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%);
+  }
+  .hero__grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: var(--space-7);
+    align-items: center;
+  }
+  .hero__copy {
+    min-width: 0;
+  }
+  .hero__demo {
+    min-width: 0;
+  }
+  .hero__title {
+    font-size: var(--size-hero);
+    margin-top: var(--space-4);
+    max-width: 15ch;
+  }
+  .hero__accent {
+    color: var(--accent-strong);
+  }
+  .hero__lead {
+    margin-top: var(--space-5);
+    max-width: 44ch;
+  }
+  .hero__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+  .hero__proof {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: var(--space-5);
+  }
+  .hero__proof-sep {
+    color: var(--text-faint);
+  }
+  .hero__proof-txt {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  /* Status strip */
+  .strip {
+    padding-block: var(--space-7);
+    background: var(--bg-tint);
+    border-block: 1px solid var(--border-soft);
+  }
+  .strip__grid {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: var(--space-7);
+    align-items: center;
+  }
+  .strip__h {
+    font-size: var(--size-display-l);
+    margin-top: var(--space-2);
+  }
+  .strip__sub {
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    max-width: 40ch;
+  }
+  .strip__cells {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+  }
+  .cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: var(--space-3);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .cell__n {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: var(--tracking-tight);
+    color: var(--accent-strong);
+  }
+  .cell__l {
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .strip__now {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: var(--space-5);
+    padding-top: var(--space-5);
+    border-top: 1px dashed var(--border);
+  }
+  .strip__now-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+  }
+  .strip__now-item {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 0.3em 0.9em;
+    transition: border-color 0.14s ease, color 0.14s ease;
+  }
+  .strip__now-item:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .strip__now-item .mono {
+    color: var(--accent-strong);
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+
+  /* Promises */
+  .promises {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+  }
+  .promise {
+    padding: var(--space-6);
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+  }
+  .promise:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+  }
+  .promise__icon {
+    font-size: 1.8rem;
+    display: block;
+  }
+  .promise__title {
+    font-size: 1.35rem;
+    margin-top: var(--space-3);
+    letter-spacing: var(--tracking-tight);
+  }
+  .promise__body {
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  /* Problem */
+  .problem__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-8);
+    align-items: center;
+  }
+  .problem__grid > * {
+    min-width: 0;
+  }
+  .problem__p {
+    margin-top: var(--space-4);
+    color: var(--text-muted);
+  }
+  .problem__lead {
+    margin-top: var(--space-4);
+    font-weight: 650;
+    font-size: 1.1rem;
+  }
+  .problem__list {
+    margin-top: var(--space-4);
+    list-style: none;
+    display: grid;
+    gap: var(--space-2);
+  }
+  .problem__list li {
+    padding-left: 1.4rem;
+    position: relative;
+    color: var(--text-muted);
+  }
+  .problem__list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--ok);
+    font-weight: 800;
+  }
+
+  /* Inside */
+  .inside__head {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: var(--space-5);
+    align-items: end;
+    margin-bottom: var(--space-6);
+  }
+  .inside__sub {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+  .slices__body {
+    margin-top: var(--space-6);
+  }
+
+  /* Household */
+  .household__inner {
+    max-width: var(--width-prose);
+    text-align: center;
+    margin-inline: auto;
+  }
+  .household .sec__h {
+    max-width: none;
+  }
+  .household__p {
+    margin-top: var(--space-4);
+    font-size: 1.15rem;
+    color: var(--text-muted);
+  }
+
+  /* CTA */
+  .cta {
+    text-align: center;
+    padding: var(--space-8) var(--space-5);
+    background: var(--lf-ink);
+    color: var(--lf-paper);
+    border-radius: var(--radius-lg);
+    background-image: radial-gradient(80% 120% at 50% 0%, color-mix(in srgb, var(--lf-fiber) 30%, transparent), transparent 60%);
+  }
+  .cta__h {
+    font-size: var(--size-display-l);
+    color: var(--lf-paper);
+    max-width: 20ch;
+    margin-inline: auto;
+  }
+  .cta__p {
+    margin: var(--space-4) auto 0;
+    max-width: 48ch;
+    color: color-mix(in srgb, var(--lf-paper) 75%, transparent);
+  }
+  .cta__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    justify-content: center;
+    margin-top: var(--space-6);
+  }
+  .cta .btn--primary {
+    background: var(--lf-lemon);
+    color: var(--lf-ink);
+  }
+  .cta .btn--ghost {
+    color: var(--lf-paper);
+    border-color: color-mix(in srgb, var(--lf-paper) 30%, transparent);
+  }
+  .cta .btn--ghost:hover {
+    background: color-mix(in srgb, var(--lf-paper) 10%, transparent);
+    border-color: var(--lf-paper);
+  }
+
+  @media (max-width: 900px) {
+    .hero__grid,
+    .strip__grid,
+    .problem__grid,
+    .inside__head {
+      grid-template-columns: 1fr;
+    }
+    .promises {
+      grid-template-columns: 1fr;
+    }
+    .strip__cells {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

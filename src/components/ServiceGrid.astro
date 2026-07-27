@@ -1,9 +1,17 @@
 ---
 import { services } from "../data/site";
+import { homeCopy, DEFAULT_LOCALE, type Locale } from "../i18n";
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const t = homeCopy(locale);
 
 const order = ["Find", "Download", "Organise", "Enjoy", "Tune", "Access"];
 const groups = order.map((g) => ({
-  name: g,
+  name: t.pipeline.groups[g] ?? g,
   items: services.filter((s) => s.group === g),
 }));
 ---
@@ -20,7 +28,7 @@ const groups = order.map((g) => ({
           {g.items.map((s) => (
             <li class:list={["sg__item", { "is-vpn": s.vpn, "is-house": s.household }]}>
               <span class="sg__name">{s.name}</span>
-              <span class="sg__role">{s.role}</span>
+              <span class="sg__role">{t.services[s.name] ?? s.role}</span>
               {s.vpn && <span class="sg__tag">VPN</span>}
             </li>
           ))}

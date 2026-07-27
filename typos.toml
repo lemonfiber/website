@@ -4,7 +4,7 @@
 # Dutch and all look like English misspellings. Excluding the files is the only
 # honest option; the alternative is an allowlist that grows with every sentence
 # and quietly disables the check for English too.
-extend-exclude = ["src/i18n/nl.ts", "src/i18n/pages-nl.ts", "src/i18n/faq.ts"]
+extend-exclude = ["src/i18n/nl.ts", "src/i18n/pages-nl.ts", "src/i18n/home-nl.ts", "src/i18n/faq.ts"]
 
 [default]
 # Ignore hotkey mockup notation like [e]rror, [s]ervice in TUI/console examples.

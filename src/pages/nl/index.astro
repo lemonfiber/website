@@ -1,0 +1,11 @@
+---
+import Base from "../../layouts/Base.astro";
+import Home from "../../components/Home.astro";
+import { getSiteData } from "../../lib/github";
+
+const data = await getSiteData();
+---
+
+<Base locale="nl" active="home" stars={data.stars}>
+  <Home locale="nl" />
+</Base>

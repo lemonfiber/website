@@ -1,6 +1,6 @@
 ---
 import { site, siblings } from "../data/site";
-import { copyFor, localePath, DEFAULT_LOCALE, type Locale } from "../i18n";
+import { copyFor, localePath, pathFor, DEFAULT_LOCALE, type Locale } from "../i18n";
 
 interface Props {
   locale?: Locale;
@@ -13,14 +13,14 @@ const cols = [
   {
     title: t.footer.project,
     links: [
-      { label: t.nav.home, href: localePath(locale, "/") },
-      { label: t.nav.roadmap, href: localePath(locale, "/roadmap") },
-      { label: t.nav.install, href: localePath(locale, "/install") },
-      { label: t.nav.changelog, href: localePath(locale, "/changelog") },
-      { label: t.nav.transparency, href: localePath(locale, "/transparency") },
-      { label: t.nav.contribute, href: localePath(locale, "/contribute") },
-      { label: t.nav.faq, href: localePath(locale, "/faq") },
-      { label: t.nav.colophon, href: localePath(locale, "/colophon") },
+      { label: t.nav.home, href: pathFor(locale, "/") },
+      { label: t.nav.roadmap, href: pathFor(locale, "/roadmap") },
+      { label: t.nav.install, href: pathFor(locale, "/install") },
+      { label: t.nav.changelog, href: pathFor(locale, "/changelog") },
+      { label: t.nav.transparency, href: pathFor(locale, "/transparency") },
+      { label: t.nav.contribute, href: pathFor(locale, "/contribute") },
+      { label: t.nav.faq, href: pathFor(locale, "/faq") },
+      { label: t.nav.colophon, href: pathFor(locale, "/colophon") },
     ],
   },
   {
@@ -139,7 +139,7 @@ const cols = [
   .ft__lic a {
     color: var(--text-muted);
     text-decoration: underline;
-    text-underline-offset: 2px;
+    text-underline-offset: 0.18em;
   }
   .ft__cols {
     display: grid;

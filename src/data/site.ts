@@ -17,13 +17,11 @@ export const site = {
   licenseUrl: "https://firstdonoharm.dev",
   by: { name: "NightWorks.io", url: "https://nightworks.io" },
 
-  // Path to the 1200×630 share card in public/, or undefined while none
-  // exists. og:image and twitter:card=summary_large_image are emitted only
-  // when this is set — a large-image card pointing at nothing is downgraded by
-  // every crawler, and an og:image pointing at a missing file is worse than no
-  // tag at all. The brand repo ships SVG only; crawlers do not accept SVG, so
-  // this needs a rendered PNG before it can be switched on.
-  ogImage: undefined as string | undefined,
+  // The 1200×630 share cards, one per locale. The card carries the headline, so
+  // an English card on a Dutch page would be the wrong headline rather than a
+  // neutral one. Regenerate with `just og` after changing the design or the
+  // wording; scripts/og.mjs renders them from the site's own tokens and font.
+  ogImage: { en: "/og.png", nl: "/og-nl.png" } as Record<string, string>,
 };
 
 // Sibling projects from the same workshop. Listed in the footer so the three

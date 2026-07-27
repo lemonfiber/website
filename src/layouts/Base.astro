@@ -6,15 +6,15 @@ import Nav from "../components/Nav.astro";
 import Footer from "../components/Footer.astro";
 import LanguageRedirect from "../components/LanguageRedirect.astro";
 import { site } from "../data/site";
-import { copyFor, localePath, DEFAULT_LOCALE, LOCALES, type Locale } from "../i18n";
+import { copyFor, localePath, localesFor, DEFAULT_LOCALE, type Locale } from "../i18n";
 
 interface Props {
   // Optional, defaulting to English, so the pages written before the locale
   // tree existed keep working untouched.
   locale?: Locale;
-  // Which locales this particular page actually exists in. Defaults to all of
-  // them; a page whose translation has not been written yet passes just its
-  // own, which hides the switcher rather than offering a link that 404s.
+  // Which locales this page exists in. Derived from the route registry in
+  // i18n/index.ts by default, so a page never has to assert it — and a new
+  // translation is one entry there rather than an edit in several files.
   translated?: Locale[];
   title?: string;
   description?: string;
@@ -24,7 +24,7 @@ interface Props {
 
 const {
   locale = DEFAULT_LOCALE,
-  translated = [...LOCALES],
+  translated,
   title,
   description,
   stars,
@@ -41,9 +41,20 @@ const canonical = new URL(Astro.url.pathname, origin).href;
 // The same page in the other locale, for hreflang. Derived from the current
 // path with its locale segment stripped, so every page advertises its own
 // twin rather than every page pointing at the two front pages.
-const route = Astro.url.pathname.replace(/^\/nl(?=\/|$)/, "") || "/";
+const route = (Astro.url.pathname.replace(/^\/nl(?=\/|$)/, "") || "/").replace(/\/$/, "") || "/";
+const available = translated ?? localesFor(route);
 
-const ogImage = site.ogImage ? new URL(site.ogImage, origin).href : undefined;
+// hreflang must advertise the same URL form the canonical uses — the build
+// emits directory-style URLs, so these carry the trailing slash too. A
+// canonical and an alternate that differ by a slash are two URLs to a crawler,
+// and the pairing between them is lost.
+const alternate = (l: Locale) => {
+  const p = localePath(l, route);
+  return new URL(p.endsWith("/") ? p : `${p}/`, origin).href;
+};
+
+const card = site.ogImage[locale];
+const ogImage = card ? new URL(card, origin).href : undefined;
 
 // Sitewide identity. Page-specific types (the application itself, the FAQ)
 // are declared by the pages that own them, so this graph stays the one thing
@@ -64,7 +75,7 @@ const identity = {
       "@id": `${origin.origin}/#site`,
       name: site.name,
       url: origin.origin,
-      inLanguage: translated.map((l) => (l === "nl" ? "nl-NL" : "en-GB")),
+      inLanguage: available.map((l) => (l === "nl" ? "nl-NL" : "en-GB")),
       publisher: { "@id": `${origin.origin}/#org` },
     },
   ],
@@ -84,14 +95,12 @@ const identity = {
     {/* Only the locales this page is genuinely published in. Advertising a
         hreflang for a page that does not exist is worse than advertising none. */}
     {
-      translated.length > 1 &&
-        translated.map((l) => (
-          <link rel="alternate" hreflang={l} href={new URL(localePath(l, route), origin).href} />
-        ))
+      available.length > 1 &&
+        available.map((l) => <link rel="alternate" hreflang={l} href={alternate(l)} />)
     }
     {
-      translated.length > 1 && (
-        <link rel="alternate" hreflang="x-default" href={new URL(route, origin).href} />
+      available.length > 1 && (
+        <link rel="alternate" hreflang="x-default" href={alternate(DEFAULT_LOCALE)} />
       )
     }
 
@@ -106,7 +115,7 @@ const identity = {
     <meta property="og:site_name" content={site.name} />
     <meta property="og:locale" content={locale === "nl" ? "nl_NL" : "en_GB"} />
     {
-      translated.filter((l) => l !== locale).map((l) => (
+      available.filter((l) => l !== locale).map((l) => (
         <meta property="og:locale:alternate" content={l === "nl" ? "nl_NL" : "en_GB"} />
       ))
     }
@@ -143,9 +152,9 @@ const identity = {
     </script>
   </head>
   <body>
-    <LanguageRedirect locale={locale} translated={translated} />
+    <LanguageRedirect locale={locale} translated={available} />
     <a class="skip-link" href="#main">{t.nav.skip}</a>
-    <Nav locale={locale} translated={translated} stars={stars} active={active} />
+    <Nav locale={locale} translated={available} stars={stars} active={active} />
     <main id="main">
       <slot />
     </main>

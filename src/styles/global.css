@@ -307,6 +307,46 @@ samp {
   flex: none;
 }
 
+/* Inline links in running text.
+ *
+ * The global `a` reset strips colour and underline, which is right for nav
+ * items, cards and anything whose whole box is the target — but it leaves a
+ * link inside a paragraph indistinguishable from the words around it. Every
+ * component was re-declaring its own treatment, and they had drifted to
+ * different underline offsets, so this is the one definition.
+ *
+ * The offset is in `em` rather than px so it tracks the font size instead of
+ * crowding the descenders at large sizes and floating away at small ones. */
+.lead a,
+.ds__p a,
+.ds__list a,
+.ds__note a,
+.cl__items a,
+.cl__prose a,
+.faq__a a,
+.col__desc a,
+.prose a,
+[data-prose] a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color 0.14s ease;
+}
+
+.lead a:hover,
+.ds__p a:hover,
+.ds__list a:hover,
+.ds__note a:hover,
+.cl__items a:hover,
+.cl__prose a:hover,
+.faq__a a:hover,
+.col__desc a:hover,
+.prose a:hover,
+[data-prose] a:hover {
+  text-decoration-thickness: 2px;
+}
+
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
