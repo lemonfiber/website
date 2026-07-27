@@ -3,11 +3,11 @@ import { defineConfig } from "astro/config";
 
 // The public URL the site is served from.
 //
-// For GitHub Pages on a custom domain (e.g. lemonfiber.io) leave `base` at "/".
+// Custom domain (lemonfiber.app) → `base` stays "/". `.app` is HSTS-preloaded,
+// so the host must serve HTTPS (GitHub Pages and Cloudflare Pages both do).
 // For a project page (lemonfiber.github.io/website) set `base: "/website"`.
-// Deployment is not wired up yet — this is the local/dev-correct default.
 export default defineConfig({
-  site: "https://lemonfiber.io",
+  site: "https://lemonfiber.app",
   base: "/",
   trailingSlash: "ignore",
   build: {

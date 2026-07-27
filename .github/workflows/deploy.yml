@@ -3,12 +3,14 @@
 # `repository_dispatch` (event type: rebuild-site) after a push or release, so a
 # maintainer changing the roadmap never touches this repo.
 #
-# DORMANT until GitHub Pages is enabled (Settings → Pages → Source: GitHub
-# Actions). Deliberately NOT triggered on `push` yet — deployment is not wired
-# up. To go live: enable Pages, then add `push: { branches: [main] }` below (or
-# just run this workflow from the Actions tab).
+# Publishes to GitHub Pages (custom domain lemonfiber.app, set via public/CNAME).
+# Rebuilds on: a push to main, a daily schedule, and a `repository_dispatch`
+# (rebuild-site) fired by sibling repos after a push or release — so the site
+# tracks the org without anyone editing this repo.
 name: deploy
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: "0 5 * * *" # daily, keeps the site fresh even with no repo activity
