@@ -178,11 +178,26 @@ export async function specVersionTrain(): Promise<TrainVersion[]> {
   return [...byVersion.values()].sort((a, b) => cmpSemver(a.version, b.version));
 }
 
+export interface TocEntry {
+  level: number;
+  text: string;
+  id: string;
+}
+
 export interface RenderedDoc {
   title: string;
   html: string;
   source: string;
   path: string;
+  toc: TocEntry[];
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
 }
 
 export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
@@ -195,9 +210,31 @@ export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
   // Drop the leading H1 — it is shown as the page header already.
   const body = trimmed.replace(/^#\s+.+\r?\n+/, "");
   const rendered = await marked.parse(body, { async: true });
-  const html = rendered.replace(
+  const linked = rendered.replace(
     /href="([^"]+)"/g,
     (_m, h) => `href="${resolveLink(path, h)}"`,
   );
-  return { title, html, source: `${SPEC_BLOB}/${path}`, path };
+  // Build the table of contents from the markdown headings (not the rendered
+  // HTML), so no fragile HTML tag-stripping is needed, then give the rendered
+  // h2/h3 the same ids in order. Code fences are removed first so a `##` inside
+  // a code block is not mistaken for a heading.
+  const noFences = body.replace(/```[\s\S]*?```/g, "");
+  const toc: TocEntry[] = [];
+  const seen = new Set<string>();
+  for (const m of noFences.matchAll(/^(#{2,3})\s+(.+?)\s*$/gm)) {
+    const text = m[2]
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/[*`_]/g, "")
+      .trim();
+    let id = slugify(text) || "section";
+    while (seen.has(id)) id += "-";
+    seen.add(id);
+    toc.push({ level: m[1].length, text, id });
+  }
+  let hi = 0;
+  const html = linked.replace(/<h([23])>/g, (_m, lvl) => {
+    const entry = toc[hi++];
+    return entry ? `<h${lvl} id="${entry.id}">` : `<h${lvl}>`;
+  });
+  return { title, html, source: `${SPEC_BLOB}/${path}`, path, toc };
 }
