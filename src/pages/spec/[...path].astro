@@ -43,9 +43,46 @@ const doc = await renderSpecDoc(docPath);
       }
     </div>
   </section>
+
+  <script is:inline type="module">
+    // Render ```mermaid fences as diagrams. Loaded from CDN only when a page
+    // actually has one, and left as a code block if the render fails.
+    const blocks = document.querySelectorAll("pre > code.language-mermaid");
+    if (blocks.length) {
+      const root = document.documentElement;
+      const dark =
+        root.dataset.theme === "ink" ||
+        (!root.dataset.theme &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+      try {
+        const { default: mermaid } = await import(
+          "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
+        );
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: dark ? "dark" : "default",
+          securityLevel: "strict",
+        });
+        blocks.forEach((code) => {
+          const div = document.createElement("div");
+          div.className = "mermaid";
+          div.textContent = code.textContent;
+          code.parentElement.replaceWith(div);
+        });
+        await mermaid.run({ querySelector: ".mermaid" });
+      } catch {
+        /* leave the fenced code block untouched */
+      }
+    }
+  </script>
 </Base>
 
 <style>
+  .spec-doc :global(.mermaid) {
+    display: flex;
+    justify-content: center;
+    margin: 1.75rem 0;
+  }
   .spec-source {
     margin-top: 0.5rem;
     font-weight: 600;

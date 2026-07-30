@@ -252,6 +252,23 @@ const application = {
     </div>
   </section>
 
+  {/* ── Spec portal ────────────────────────────────────── */}
+  <section class="section spec-hl">
+    <div class="container">
+      <h2 class="sec__h">Built in the open, spec-first.</h2>
+      <p class="spec-hl__p">
+        Every capability is written down before it's built — and the whole
+        specification is browsable on-site. See what's proposed, follow the
+        release train, and read any requirement with a link back to its source.
+      </p>
+      <div class="spec-hl__row">
+        <a class="btn btn--ghost" href={path("/spec")}>Browse the spec</a>
+        <a class="btn btn--ghost" href={path("/rfc")}>RFCs &amp; Drafts</a>
+        <a class="btn btn--ghost" href={path("/roadmap")}>The version train</a>
+      </div>
+    </div>
+  </section>
+
   {/* ── CTA ──────────────────────────────────────────────── */}
   <section class="section">
     <div class="container cta">
@@ -266,6 +283,17 @@ const application = {
   </section>
 
 <style>
+  .spec-hl__p {
+    margin-top: var(--space-4);
+    max-width: 60ch;
+    color: var(--text-muted);
+  }
+  .spec-hl__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+  }
   .pipeline__body {
     margin-top: var(--space-6);
   }
