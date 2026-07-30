@@ -178,11 +178,26 @@ export async function specVersionTrain(): Promise<TrainVersion[]> {
   return [...byVersion.values()].sort((a, b) => cmpSemver(a.version, b.version));
 }
 
+export interface TocEntry {
+  level: number;
+  text: string;
+  id: string;
+}
+
 export interface RenderedDoc {
   title: string;
   html: string;
   source: string;
   path: string;
+  toc: TocEntry[];
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
 }
 
 export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
@@ -195,9 +210,23 @@ export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
   // Drop the leading H1 — it is shown as the page header already.
   const body = trimmed.replace(/^#\s+.+\r?\n+/, "");
   const rendered = await marked.parse(body, { async: true });
-  const html = rendered.replace(
+  const linked = rendered.replace(
     /href="([^"]+)"/g,
     (_m, h) => `href="${resolveLink(path, h)}"`,
   );
-  return { title, html, source: `${SPEC_BLOB}/${path}`, path };
+  // Give h2/h3 stable ids and collect a table of contents.
+  const toc: TocEntry[] = [];
+  const seen = new Set<string>();
+  const html = linked.replace(
+    /<h([23])>([\s\S]*?)<\/h\1>/g,
+    (_m, lvl, inner) => {
+      const text = inner.replace(/<[^>]+>/g, "").trim();
+      let id = slugify(text) || "section";
+      while (seen.has(id)) id += "-";
+      seen.add(id);
+      toc.push({ level: Number(lvl), text, id });
+      return `<h${lvl} id="${id}">${inner}</h${lvl}>`;
+    },
+  );
+  return { title, html, source: `${SPEC_BLOB}/${path}`, path, toc };
 }

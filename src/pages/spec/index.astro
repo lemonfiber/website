@@ -30,7 +30,15 @@ const total = groups.reduce((n, g) => n + g.docs.length, 0);
 
   <section class="section">
     <div class="container">
-      <div class="spec-grid">
+      <input
+        id="spec-search"
+        class="spec-search"
+        type="search"
+        placeholder="Filter the spec by title…"
+        aria-label="Filter the spec by title"
+        autocomplete="off"
+      />
+      <div class="spec-grid" id="spec-grid">
         {
           groups.map((g) => (
             <div class="spec-col card">
@@ -46,11 +54,56 @@ const total = groups.reduce((n, g) => n + g.docs.length, 0);
           ))
         }
       </div>
+      <p class="spec-nomatch" hidden>No documents match that filter.</p>
     </div>
   </section>
+
+  <script is:inline>
+    (() => {
+      const input = document.getElementById("spec-search");
+      const grid = document.getElementById("spec-grid");
+      if (!input || !grid) return;
+      const cols = Array.from(grid.children);
+      const nomatch = document.querySelector(".spec-nomatch");
+      input.addEventListener("input", () => {
+        const q = input.value.trim().toLowerCase();
+        let shown = 0;
+        cols.forEach((col) => {
+          let any = 0;
+          col.querySelectorAll("li").forEach((li) => {
+            const hit = !q || li.textContent.toLowerCase().includes(q);
+            li.hidden = !hit;
+            if (hit) any++;
+          });
+          col.hidden = any === 0;
+          if (any > 0) shown++;
+        });
+        if (nomatch) nomatch.hidden = shown !== 0;
+      });
+    })();
+  </script>
 </Base>
 
 <style>
+  .spec-search {
+    font: inherit;
+    width: 100%;
+    max-width: 32rem;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border, #333);
+    background: var(--bg-tint, rgba(128, 128, 128, 0.08));
+    color: inherit;
+  }
+  .spec-search:focus {
+    outline: none;
+    border-color: var(--accent, #d98a3a);
+  }
+  .spec-nomatch {
+    opacity: 0.7;
+    margin-top: 1rem;
+  }
   .spec-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));

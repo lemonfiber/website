@@ -35,6 +35,20 @@ const doc = await renderSpecDoc(docPath);
   <section class="section">
     <div class="container spec-wrap">
       {
+        doc && doc.toc.length >= 3 && (
+          <nav class="spec-toc" aria-label="On this page">
+            <p class="spec-toc__h">On this page</p>
+            <ul>
+              {doc.toc.map((t) => (
+                <li class:list={[`lvl-${t.level}`]}>
+                  <a href={`#${t.id}`}>{t.text}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+      {
         doc ? (
           <article class="spec-doc" set:html={doc.html} />
         ) : (
@@ -92,6 +106,46 @@ const doc = await renderSpecDoc(docPath);
   }
   .spec-wrap {
     max-width: 78ch;
+  }
+  .spec-toc {
+    margin: 0 0 2rem;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--border, #333);
+    border-radius: 8px;
+    background: var(--bg-tint, rgba(128, 128, 128, 0.08));
+    font-size: 0.9rem;
+  }
+  .spec-toc__h {
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+  }
+  .spec-toc ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.2rem;
+  }
+  .spec-toc .lvl-3 {
+    padding-left: 1rem;
+    font-size: 0.86rem;
+    opacity: 0.85;
+  }
+  .spec-toc a {
+    text-decoration: none;
+    color: inherit;
+  }
+  .spec-toc a:hover {
+    color: var(--accent-strong, #d98a3a);
+    text-decoration: underline;
+  }
+  .spec-doc :global(h2),
+  .spec-doc :global(h3) {
+    scroll-margin-top: 5rem;
   }
   .spec-doc :global(h2) {
     margin-top: 2.25rem;
