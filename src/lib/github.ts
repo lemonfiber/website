@@ -104,7 +104,7 @@ async function fetchText(url: string, withHeaders: boolean): Promise<string | nu
   return body;
 }
 
-async function getJSON<T>(url: string): Promise<T | null> {
+export async function getJSON<T>(url: string): Promise<T | null> {
   const body = await fetchText(url, true);
   if (body === null) return null;
   try {
@@ -114,7 +114,7 @@ async function getJSON<T>(url: string): Promise<T | null> {
   }
 }
 
-async function getText(url: string): Promise<string | null> {
+export async function getText(url: string): Promise<string | null> {
   return fetchText(url, false);
 }
 

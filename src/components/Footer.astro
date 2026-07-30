@@ -35,11 +35,11 @@ const cols = [
   {
     title: "Specification",
     links: [
+      { label: "Browse the spec", href: pathFor(locale, "/spec") },
       { label: "RFCs & Drafts", href: pathFor(locale, "/rfc") },
-      { label: "Feature catalogue", href: `${site.specUrl}/tree/main/10-functional/features` },
-      { label: "User journeys", href: `${site.specUrl}/tree/main/10-functional/journeys` },
-      { label: "Architecture", href: `${site.specUrl}/tree/main/20-architecture` },
-      { label: "How the spec works", href: `${site.specUrl}/blob/main/00-overview/how-the-spec-works.md` },
+      { label: "Features", href: pathFor(locale, "/spec/10-functional/features/README") },
+      { label: "User journeys", href: pathFor(locale, "/spec/10-functional/journeys/README") },
+      { label: "Architecture", href: pathFor(locale, "/spec/20-architecture/README") },
     ],
   },
   {

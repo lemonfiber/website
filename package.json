@@ -2,7 +2,7 @@
   "name": "@lemonfiber/website",
   "version": "0.1.0",
   "private": true,
-  "description": "The lemonfiber frontpage \u2014 a build-in-the-open site driven by the GitHub org.",
+  "description": "The lemonfiber frontpage — a build-in-the-open site driven by the GitHub org.",
   "type": "module",
   "license": "Hippocratic-3.0",
   "engines": {
@@ -20,7 +20,8 @@
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "5.2.6",
     "@fontsource-variable/jetbrains-mono": "5.2.6",
-    "astro": "7.1.4"
+    "astro": "7.1.4",
+    "marked": "^15.0.12"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
