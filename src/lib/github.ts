@@ -124,6 +124,18 @@ const EMOJI: Record<string, DeliverableStatus> = {
   "☐": "todo",
 };
 
+// How much a deliverable counts toward a progress figure: a full unit when done,
+// a quarter when partial. Partial credit is deliberately light. A row in the
+// status file often stands for a whole epic barely begun — the entire read-only
+// TUI is one ◐ row — and half-credit read that as "halfway" when it was not,
+// which is what made the bars overstate. One weight, used by both the
+// per-milestone rollup and the overall figure, so the two cannot disagree.
+const PARTIAL_CREDIT = 0.25;
+
+function creditOf(status: DeliverableStatus): number {
+  return status === "done" ? 1 : status === "partial" ? PARTIAL_CREDIT : 0;
+}
+
 function rollup(deliverables: Deliverable[]): {
   done: number;
   total: number;
@@ -134,10 +146,7 @@ function rollup(deliverables: Deliverable[]): {
   // from every count — including them would inflate progress.
   const items = deliverables.filter((d) => !d.group);
   const total = items.length || 1;
-  const doneUnits = items.reduce(
-    (n, d) => n + (d.status === "done" ? 1 : d.status === "partial" ? 0.5 : 0),
-    0,
-  );
+  const doneUnits = items.reduce((n, d) => n + creditOf(d.status), 0);
   const done = items.filter((d) => d.status === "done").length;
   const pct = Math.round((doneUnits / total) * 100);
   const status: DeliverableStatus =
@@ -647,7 +656,7 @@ export async function getSiteData(): Promise<SiteData> {
       n +
       m.deliverables
         .filter((d) => !d.group)
-        .reduce((k, d) => k + (d.status === "done" ? 1 : d.status === "partial" ? 0.5 : 0), 0),
+        .reduce((k, d) => k + creditOf(d.status), 0),
     0,
   );
 
