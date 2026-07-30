@@ -3,10 +3,12 @@ import Base from "../layouts/Base.astro";
 import ProgressBar from "../components/ProgressBar.astro";
 import StatusPill from "../components/StatusPill.astro";
 import { getSiteData } from "../lib/github";
+import { specVersionTrain } from "../lib/spec";
 import { site } from "../data/site";
 import { statusGlyph } from "../lib/format";
 
 const data = await getSiteData();
+const train = await specVersionTrain();
 ---
 
 <Base
@@ -37,8 +39,48 @@ const data = await getSiteData();
     </div>
   </section>
 
+  {
+    train.length > 0 && (
+      <section class="section train-sec">
+        <div class="container">
+          <h2 class="train__h">The version train</h2>
+          <p class="train__lead">
+            Every release, sourced from the spec's{" "}
+            <a href="/spec/70-operations/versions/README">version manifests</a> and{" "}
+            <a href="/spec/10-functional/features/README">feature board</a>. Two epochs —
+            v1 (the product) to 1.0, then v2 (the ecosystem) to 2.0. Expand a version for the
+            features it ships.
+          </p>
+          <div class="train">
+            {train.map((v) => (
+              <details class="ver" open={v.status !== "planned"}>
+                <summary class="ver__sum">
+                  <code class="ver__num">{v.version}</code>
+                  <span class="ver__epoch">{v.epoch}</span>
+                  <span class:list={["ver__pill", `is-${v.status}`]}>{v.status}</span>
+                  <span class="ver__count">{v.features.length} features</span>
+                </summary>
+                <ul class="ver__feats">
+                  {v.features.map((f) => (
+                    <li>
+                      <a href={`/spec/${f.slug}`}>
+                        <code class="ver__fid">{f.id}</code>
+                        <span>{f.title}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   <section class="section timeline-sec">
     <div class="container">
+      <h2 class="tl__sech">Milestones</h2>
       <ol class="tl">
         {
           data.milestones.map((m) => (
@@ -129,6 +171,114 @@ const data = await getSiteData();
     font-size: var(--size-caption);
     color: var(--text-muted);
     font-family: var(--font-mono);
+  }
+
+  .train-sec {
+    padding-bottom: var(--space-6);
+  }
+  .train__h,
+  .tl__sech {
+    font-size: var(--size-display-m);
+    letter-spacing: var(--tracking-tight);
+    margin-bottom: var(--space-3);
+  }
+  .train__lead {
+    color: var(--text-muted);
+    max-width: 64ch;
+    margin-bottom: var(--space-5);
+  }
+  .train__lead a {
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+  .train {
+    display: grid;
+    gap: var(--space-3);
+  }
+  .ver {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+  .ver__sum {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    cursor: pointer;
+    flex-wrap: wrap;
+    list-style: none;
+  }
+  .ver__sum::-webkit-details-marker {
+    display: none;
+  }
+  .ver__num {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--accent-strong);
+  }
+  .ver__epoch {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--text-faint);
+    border: 1px solid var(--border-soft);
+    padding: 0.1em 0.5em;
+    border-radius: 999px;
+  }
+  .ver__pill {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.15em 0.6em;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .ver__pill.is-released {
+    color: var(--ok);
+    background: var(--ok-bg);
+  }
+  .ver__pill.is-staged {
+    color: var(--accent-strong);
+    background: var(--wip-bg);
+  }
+  .ver__pill.is-planned {
+    color: var(--text-muted);
+    background: var(--bg-tint);
+  }
+  .ver__count {
+    margin-left: auto;
+    font-size: 0.82rem;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+  }
+  .ver__feats {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-3) var(--space-5) var(--space-4);
+    display: grid;
+    gap: 0.2rem;
+    border-top: 1px dashed var(--border);
+  }
+  .ver__feats a {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    padding: 0.25rem 0.35rem;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: inherit;
+    font-size: 0.9rem;
+  }
+  .ver__feats a:hover {
+    background: var(--surface-2);
+  }
+  .ver__fid {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent-strong);
   }
 
   .timeline-sec {
