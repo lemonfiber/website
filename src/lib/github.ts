@@ -428,6 +428,75 @@ async function fetchGoodFirstIssues(): Promise<Issue[]> {
     }));
 }
 
+// ── RFC feed ──────────────────────────────────────────────────────
+//
+// The pre-approval surface (GOV-R45): open `rfc` issues on the spec repo, and
+// the spec's own `Draft` features (read from its generated board), together —
+// what is under consideration before it binds. Both fall back to empty so a
+// GitHub hiccup never breaks the build.
+
+export interface DraftFeature {
+  id: string;
+  title: string;
+  area: string;
+  url: string;
+}
+
+export interface RfcFeed {
+  issues: Issue[];
+  drafts: DraftFeature[];
+}
+
+async function fetchRfcIssues(): Promise<Issue[]> {
+  const q = encodeURIComponent(`repo:${ORG}/spec label:rfc state:open is:issue`);
+  const data = await getJSON<{ items: ApiIssue[] }>(
+    `${API}/search/issues?q=${q}&per_page=30&sort=created`,
+  );
+  if (!data?.items) return [];
+  return data.items
+    .filter((i) => !i.pull_request)
+    .map((i) => ({
+      title: i.title,
+      url: i.html_url,
+      number: i.number,
+      repo: i.repository_url.split("/").pop() || "",
+      labels: i.labels.map((l) => l.name),
+      createdAt: i.created_at,
+    }));
+}
+
+interface ApiBoardFeature {
+  id: string;
+  title: string;
+  area: string;
+  status: string;
+  path: string;
+}
+
+async function fetchDraftFeatures(): Promise<DraftFeature[]> {
+  const idx = await getJSON<{ features: ApiBoardFeature[] }>(
+    `${RAW}/${ORG}/spec/main/10-functional/features/index.json`,
+  );
+  if (!idx?.features) return [];
+  return idx.features
+    .filter((f) => f.status === "draft")
+    .map((f) => ({
+      id: f.id,
+      title: f.title,
+      area: f.area,
+      url: `https://github.com/${ORG}/spec/blob/main/10-functional/features/${f.path}`,
+    }));
+}
+
+let rfcCache: RfcFeed | null = null;
+
+export async function getRfc(): Promise<RfcFeed> {
+  if (rfcCache) return rfcCache;
+  const [issues, drafts] = await Promise.all([fetchRfcIssues(), fetchDraftFeatures()]);
+  rfcCache = { issues, drafts };
+  return rfcCache;
+}
+
 interface ApiAsset {
   name: string;
   browser_download_url: string;
