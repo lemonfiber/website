@@ -406,6 +406,7 @@ interface ApiIssue {
   repository_url: string;
   labels: { name: string }[];
   pull_request?: unknown;
+  body?: string;
 }
 
 function toIssue(i: ApiIssue): Issue {
@@ -439,27 +440,52 @@ async function fetchGoodFirstIssues(): Promise<Issue[]> {
 // what is under consideration before it binds. Both fall back to empty so a
 // GitHub hiccup never breaks the build.
 
-export interface DraftFeature {
-  id: string;
+// One shape for both kinds of pre-approval item, so the page can filter them
+// together by area, status and label.
+export interface RfcItem {
+  kind: "issue" | "draft";
   title: string;
-  area: string;
   url: string;
+  ref: string; // "#64" for an issue, "C10" for a Draft feature
+  area: string; // "A".."K", or "" if unknown
+  status: string; // "open" | "approved" | "draft"
+  labels: string[];
+  createdAt: string;
 }
 
 export interface RfcFeed {
-  issues: Issue[];
-  drafts: DraftFeature[];
+  items: RfcItem[];
+  areas: string[];
 }
 
-async function fetchRfcIssues(): Promise<Issue[]> {
+function areaFromBody(body: string | undefined): string {
+  const m = (body ?? "").match(/###\s+Area\s*\n+\s*([A-K])\b/);
+  return m ? m[1] : "";
+}
+
+async function fetchRfcIssues(): Promise<RfcItem[]> {
   const q = encodeURIComponent(`repo:${ORG}/spec label:rfc state:open is:issue`);
   const data = await getJSON<{ items: ApiIssue[] }>(
-    `${API}/search/issues?q=${q}&per_page=30&sort=created`,
+    `${API}/search/issues?q=${q}&per_page=40&sort=created`,
   );
   if (!data?.items) return [];
   return data.items
-    .filter((i) => !i.pull_request)
-    .map(toIssue);
+    .filter(
+      (i) => !i.pull_request && !i.labels.some((l) => l.name === "rfc:declined"),
+    )
+    .map((i) => {
+      const names = i.labels.map((l) => l.name);
+      return {
+        kind: "issue" as const,
+        title: i.title.replace(/^RFC:\s*/i, ""),
+        url: i.html_url,
+        ref: `#${i.number}`,
+        area: areaFromBody(i.body),
+        status: names.includes("rfc:approved") ? "approved" : "open",
+        labels: names.filter((n) => n !== "rfc" && !n.startsWith("rfc:")),
+        createdAt: i.created_at,
+      };
+    });
 }
 
 interface ApiBoardFeature {
@@ -468,9 +494,10 @@ interface ApiBoardFeature {
   area: string;
   status: string;
   path: string;
+  labels?: string[];
 }
 
-async function fetchDraftFeatures(): Promise<DraftFeature[]> {
+async function fetchDraftFeatures(): Promise<RfcItem[]> {
   const idx = await getJSON<{ features: ApiBoardFeature[] }>(
     `${RAW}/${ORG}/spec/main/10-functional/features/index.json`,
   );
@@ -478,10 +505,14 @@ async function fetchDraftFeatures(): Promise<DraftFeature[]> {
   return idx.features
     .filter((f) => f.status === "draft")
     .map((f) => ({
-      id: f.id,
+      kind: "draft" as const,
       title: f.title,
+      url: `/spec/10-functional/features/${f.path.replace(/\.md$/, "")}`,
+      ref: f.id,
       area: f.area,
-      url: `https://github.com/${ORG}/spec/blob/main/10-functional/features/${f.path}`,
+      status: "draft",
+      labels: f.labels ?? [],
+      createdAt: "",
     }));
 }
 
@@ -489,8 +520,15 @@ let rfcCache: RfcFeed | null = null;
 
 export async function getRfc(): Promise<RfcFeed> {
   if (rfcCache) return rfcCache;
-  const [issues, drafts] = await Promise.all([fetchRfcIssues(), fetchDraftFeatures()]);
-  rfcCache = { issues, drafts };
+  const [issues, drafts] = await Promise.all([
+    fetchRfcIssues(),
+    fetchDraftFeatures(),
+  ]);
+  const items = [...issues, ...drafts];
+  const areas = [...new Set(items.map((i) => i.area).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b),
+  );
+  rfcCache = { items, areas };
   return rfcCache;
 }
 

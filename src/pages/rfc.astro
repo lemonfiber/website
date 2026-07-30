@@ -2,28 +2,33 @@
 import Base from "../layouts/Base.astro";
 import { getSiteData, getRfc } from "../lib/github";
 import { site } from "../data/site";
-import { relativeTime } from "../lib/format";
 
 const data = await getSiteData();
-const { issues, drafts } = await getRfc();
+const { items, areas } = await getRfc();
 const newRfcUrl = `${site.githubOrg}/spec/issues/new?template=rfc.yml`;
+const statuses = [
+  { key: "open", label: "Open RFC" },
+  { key: "approved", label: "Approved" },
+  { key: "draft", label: "Draft" },
+];
+const count = (s: string) => items.filter((i) => i.status === s).length;
 ---
 
 <Base
   active="rfc"
   stars={data.stars}
   title="RFC"
-  description="What's under consideration — open RFCs and Draft requirements — before it binds.">
+  description="What's under consideration — open RFCs and Draft requirements — filterable by area and status, before it binds.">
   <section class="section head">
     <div class="container">
       <p class="eyebrow">Request for comments</p>
       <h1 class="head__h">What's being considered.</h1>
       <p class="lead head__lead">
         The spec is canonical, but nothing lands without discussion. This is the
-        pre-approval feed: open <strong>RFC issues</strong> anyone can weigh in
-        on, and the spec's own <strong>Draft</strong> requirements — proposed,
-        not yet binding. When a maintainer approves an RFC it becomes a Draft
-        spec PR automatically; merging that hardens it into the spec.
+        pre-approval feed — open <strong>RFC issues</strong> and the spec's own
+        <strong>Draft</strong> requirements, filterable by area and status. When a
+        maintainer approves an RFC it becomes a Draft spec PR automatically;
+        merging that hardens it into the spec.
       </p>
       <div class="head__cta">
         <a class="rfc-cta" href={newRfcUrl} target="_blank" rel="noopener">Open an RFC →</a>
@@ -33,54 +38,109 @@ const newRfcUrl = `${site.githubOrg}/spec/issues/new?template=rfc.yml`;
 
   <section class="section">
     <div class="container">
-      <h2 class="rfc-h">Open RFCs <span class="rfc-count">{issues.length}</span></h2>
       {
-        issues.length === 0 ? (
+        items.length === 0 ? (
           <p class="rfc-muted">
-            No open RFCs right now.{" "}
+            Nothing under consideration right now.{" "}
             <a href={newRfcUrl} target="_blank" rel="noopener">Propose one.</a>
           </p>
         ) : (
-          <ul class="rfc-list">
-            {issues.map((i) => (
-              <li class="card rfc-item">
-                <a href={i.url} target="_blank" rel="noopener" class="rfc-item__title">{i.title}</a>
-                <div class="rfc-item__meta">
-                  <span>#{i.number}</span>
-                  <span>· opened {relativeTime(i.createdAt)}</span>
-                  {i.labels.filter((l) => l !== "rfc").map((l) => <span class="rfc-tag">{l}</span>)}
+          <Fragment>
+            <div class="rfc-filters">
+              <div class="rfc-fgroup" data-filter="status">
+                <button class="rfc-chip is-active" data-val="all" type="button">
+                  All <span class="rfc-chip__n">{items.length}</span>
+                </button>
+                {statuses.map(
+                  (s) =>
+                    count(s.key) > 0 && (
+                      <button class="rfc-chip" data-val={s.key} type="button">
+                        {s.label} <span class="rfc-chip__n">{count(s.key)}</span>
+                      </button>
+                    ),
+                )}
+              </div>
+              {areas.length > 1 && (
+                <div class="rfc-fgroup" data-filter="area">
+                  <button class="rfc-chip is-active" data-val="all" type="button">
+                    All areas
+                  </button>
+                  {areas.map((a) => (
+                    <button class="rfc-chip" data-val={a} type="button">
+                      Area {a}
+                    </button>
+                  ))}
                 </div>
-              </li>
-            ))}
-          </ul>
+              )}
+            </div>
+
+            <ul class="rfc-list" id="rfc-list">
+              {items.map((i) => (
+                <li
+                  class="card rfc-item"
+                  data-area={i.area}
+                  data-status={i.status}
+                  data-kind={i.kind}>
+                  <a
+                    href={i.url}
+                    target={i.kind === "issue" ? "_blank" : undefined}
+                    rel="noopener"
+                    class="rfc-item__title">
+                    <code class="rfc-item__ref">{i.ref}</code>
+                    <span>{i.title}</span>
+                  </a>
+                  <div class="rfc-item__meta">
+                    <span class:list={["rfc-badge", `is-${i.status}`]}>{i.status}</span>
+                    {i.area && <span class="rfc-badge is-area">area {i.area}</span>}
+                    {i.labels.map((l) => (
+                      <span class="rfc-tag">{l}</span>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p class="rfc-muted rfc-empty" hidden>
+              No items match those filters.
+            </p>
+          </Fragment>
         )
       }
     </div>
   </section>
 
-  <section class="section">
-    <div class="container">
-      <h2 class="rfc-h">Draft requirements <span class="rfc-count">{drafts.length}</span></h2>
-      <p class="rfc-muted">Proposed in the spec, not yet binding.</p>
-      {
-        drafts.length === 0 ? (
-          <p class="rfc-muted">No Draft requirements right now.</p>
-        ) : (
-          <ul class="rfc-list">
-            {drafts.map((d) => (
-              <li class="card rfc-item">
-                <a href={d.url} target="_blank" rel="noopener" class="rfc-item__title">{d.id} — {d.title}</a>
-                <div class="rfc-item__meta">
-                  <span class="rfc-tag">area {d.area}</span>
-                  <span>· Draft</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )
-      }
-    </div>
-  </section>
+  <script is:inline>
+    (() => {
+      const list = document.getElementById("rfc-list");
+      if (!list) return;
+      const state = { status: "all", area: "all" };
+      const items = Array.from(list.children);
+      const empty = document.querySelector(".rfc-empty");
+      const apply = () => {
+        let shown = 0;
+        items.forEach((li) => {
+          const okS = state.status === "all" || li.dataset.status === state.status;
+          const okA = state.area === "all" || li.dataset.area === state.area;
+          const vis = okS && okA;
+          li.hidden = !vis;
+          if (vis) shown++;
+        });
+        if (empty) empty.hidden = shown !== 0;
+      };
+      document.querySelectorAll(".rfc-fgroup").forEach((group) => {
+        const dim = group.dataset.filter;
+        group.querySelectorAll(".rfc-chip").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            group
+              .querySelectorAll(".rfc-chip")
+              .forEach((b) => b.classList.remove("is-active"));
+            btn.classList.add("is-active");
+            state[dim] = btn.dataset.val;
+            apply();
+          });
+        });
+      });
+    })();
+  </script>
 </Base>
 
 <style>
@@ -89,26 +149,48 @@ const newRfcUrl = `${site.githubOrg}/spec/issues/new?template=rfc.yml`;
     font-weight: 600;
     text-decoration: none;
   }
-  .rfc-h {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .rfc-count {
-    font-size: 0.8em;
-    font-weight: 600;
-    opacity: 0.6;
-    border: 1px solid currentColor;
-    border-radius: 999px;
-    padding: 0 0.5rem;
-  }
   .rfc-muted {
     opacity: 0.7;
+  }
+  .rfc-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+  .rfc-fgroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .rfc-chip {
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+    padding: 0.3em 0.8em;
+    border-radius: 999px;
+    border: 1px solid var(--border, #333);
+    background: transparent;
+    color: inherit;
+    opacity: 0.75;
+  }
+  .rfc-chip:hover {
+    opacity: 1;
+  }
+  .rfc-chip.is-active {
+    opacity: 1;
+    border-color: var(--accent, #d98a3a);
+    background: var(--wip-bg, rgba(217, 138, 58, 0.12));
+    color: var(--accent-strong, #d98a3a);
+  }
+  .rfc-chip__n {
+    opacity: 0.6;
+    font-variant-numeric: tabular-nums;
   }
   .rfc-list {
     list-style: none;
     padding: 0;
-    margin: 1rem 0 0;
+    margin: 0;
     display: grid;
     gap: 0.75rem;
   }
@@ -116,24 +198,55 @@ const newRfcUrl = `${site.githubOrg}/spec/issues/new?template=rfc.yml`;
     padding: 1rem 1.25rem;
   }
   .rfc-item__title {
+    display: flex;
+    gap: 0.55rem;
+    align-items: baseline;
     font-weight: 600;
     text-decoration: none;
-    display: block;
+    color: inherit;
+  }
+  .rfc-item__ref {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.8rem;
+    color: var(--accent-strong, #d98a3a);
   }
   .rfc-item__meta {
-    margin-top: 0.35rem;
-    font-size: 0.85rem;
-    opacity: 0.7;
+    margin-top: 0.45rem;
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
     align-items: center;
   }
-  .rfc-tag {
-    font-size: 0.75rem;
-    border: 1px solid currentColor;
+  .rfc-badge {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 600;
+    padding: 0.15em 0.6em;
     border-radius: 999px;
-    padding: 0 0.5rem;
-    opacity: 0.85;
+  }
+  .rfc-badge.is-open {
+    color: var(--accent-strong, #d98a3a);
+    background: var(--wip-bg, rgba(217, 138, 58, 0.12));
+  }
+  .rfc-badge.is-approved {
+    color: var(--ok, #4caf50);
+    background: var(--ok-bg, rgba(76, 175, 80, 0.12));
+  }
+  .rfc-badge.is-draft {
+    color: var(--text-muted, #999);
+    background: var(--bg-tint, rgba(128, 128, 128, 0.12));
+  }
+  .rfc-badge.is-area {
+    color: var(--text-faint, #888);
+    background: transparent;
+    border: 1px solid var(--border-soft, #333);
+  }
+  .rfc-tag {
+    font-size: 0.72rem;
+    opacity: 0.8;
+    border: 1px solid var(--border-soft, #333);
+    border-radius: 999px;
+    padding: 0.1em 0.55em;
   }
 </style>
