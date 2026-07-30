@@ -214,19 +214,27 @@ export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
     /href="([^"]+)"/g,
     (_m, h) => `href="${resolveLink(path, h)}"`,
   );
-  // Give h2/h3 stable ids and collect a table of contents.
+  // Build the table of contents from the markdown headings (not the rendered
+  // HTML), so no fragile HTML tag-stripping is needed, then give the rendered
+  // h2/h3 the same ids in order. Code fences are removed first so a `##` inside
+  // a code block is not mistaken for a heading.
+  const noFences = body.replace(/```[\s\S]*?```/g, "");
   const toc: TocEntry[] = [];
   const seen = new Set<string>();
-  const html = linked.replace(
-    /<h([23])>([\s\S]*?)<\/h\1>/g,
-    (_m, lvl, inner) => {
-      const text = inner.replace(/<[^>]+>/g, "").trim();
-      let id = slugify(text) || "section";
-      while (seen.has(id)) id += "-";
-      seen.add(id);
-      toc.push({ level: Number(lvl), text, id });
-      return `<h${lvl} id="${id}">${inner}</h${lvl}>`;
-    },
-  );
+  for (const m of noFences.matchAll(/^(#{2,3})\s+(.+?)\s*$/gm)) {
+    const text = m[2]
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/[*`_]/g, "")
+      .trim();
+    let id = slugify(text) || "section";
+    while (seen.has(id)) id += "-";
+    seen.add(id);
+    toc.push({ level: m[1].length, text, id });
+  }
+  let hi = 0;
+  const html = linked.replace(/<h([23])>/g, (_m, lvl) => {
+    const entry = toc[hi++];
+    return entry ? `<h${lvl} id="${entry.id}">` : `<h${lvl}>`;
+  });
   return { title, html, source: `${SPEC_BLOB}/${path}`, path, toc };
 }
