@@ -1,0 +1,81 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getSiteData } from "../../lib/github";
+import { specGroups } from "../../lib/spec";
+import { site } from "../../data/site";
+
+const data = await getSiteData();
+const groups = await specGroups();
+const total = groups.reduce((n, g) => n + g.docs.length, 0);
+---
+
+<Base
+  active="spec"
+  stars={data.stars}
+  title="Specification"
+  description="The complete lemonfiber specification, rendered on-site — every document, sourced live from GitHub.">
+  <section class="section head">
+    <div class="container">
+      <p class="eyebrow">The specification</p>
+      <h1 class="head__h">The whole spec, for humans.</h1>
+      <p class="lead head__lead">
+        Lemonfiber is spec-first: every line of code cites a requirement that
+        already exists here. This is the entire specification — {total} documents
+        across {groups.length} sections — rendered on-site and sourced live from
+        the <a href={`${site.specUrl}`} target="_blank" rel="noopener">spec repository</a>.
+        Every page links back to its source.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="spec-grid">
+        {
+          groups.map((g) => (
+            <div class="spec-col card">
+              <h2 class="spec-col__h">{g.section}</h2>
+              <ul class="spec-col__list">
+                {g.docs.map((d) => (
+                  <li>
+                    <a href={`/spec/${d.slug}`}>{d.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .spec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+  .spec-col {
+    padding: 1.1rem 1.25rem;
+  }
+  .spec-col__h {
+    font-size: 1rem;
+    margin-bottom: 0.6rem;
+  }
+  .spec-col__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .spec-col__list a {
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+  .spec-col__list a:hover {
+    text-decoration: underline;
+  }
+</style>

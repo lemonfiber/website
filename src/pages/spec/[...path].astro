@@ -1,0 +1,122 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getSiteData } from "../../lib/github";
+import { specInventory, renderSpecDoc } from "../../lib/spec";
+
+export async function getStaticPaths() {
+  const docs = await specInventory();
+  return docs.map((d) => ({ params: { path: d.slug }, props: { docPath: d.path } }));
+}
+
+const { docPath } = Astro.props as { docPath: string };
+const data = await getSiteData();
+const doc = await renderSpecDoc(docPath);
+---
+
+<Base
+  active="spec"
+  stars={data.stars}
+  title={doc?.title ?? "Specification"}
+  description={`${docPath} — rendered from the lemonfiber specification.`}>
+  <section class="section head">
+    <div class="container">
+      <p class="eyebrow"><a href="/spec">Specification</a> · {docPath}</p>
+      <h1 class="head__h">{doc?.title ?? "Document"}</h1>
+      {
+        doc && (
+          <p class="spec-source">
+            <a href={doc.source} target="_blank" rel="noopener">View source on GitHub ↗</a>
+          </p>
+        )
+      }
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container spec-wrap">
+      {
+        doc ? (
+          <article class="spec-doc" set:html={doc.html} />
+        ) : (
+          <p class="spec-muted">This document could not be loaded right now.</p>
+        )
+      }
+    </div>
+  </section>
+</Base>
+
+<style>
+  .spec-source {
+    margin-top: 0.5rem;
+    font-weight: 600;
+  }
+  .spec-muted {
+    opacity: 0.7;
+  }
+  .spec-wrap {
+    max-width: 78ch;
+  }
+  .spec-doc :global(h2) {
+    margin-top: 2.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border, #333);
+  }
+  .spec-doc :global(h3) {
+    margin-top: 1.75rem;
+  }
+  .spec-doc :global(p),
+  .spec-doc :global(li) {
+    line-height: 1.7;
+  }
+  .spec-doc :global(ul),
+  .spec-doc :global(ol) {
+    padding-left: 1.4rem;
+  }
+  .spec-doc :global(a) {
+    color: var(--accent-strong, #d98a3a);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+  .spec-doc :global(blockquote) {
+    margin: 1.25rem 0;
+    padding: 0.5rem 1rem;
+    border-left: 3px solid var(--accent-strong, #d98a3a);
+    opacity: 0.9;
+  }
+  .spec-doc :global(code) {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9em;
+    background: var(--bg-tint, rgba(128, 128, 128, 0.12));
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+  .spec-doc :global(pre) {
+    overflow-x: auto;
+    padding: 1rem;
+    border-radius: 8px;
+    background: var(--bg-tint, rgba(128, 128, 128, 0.12));
+    border: 1px solid var(--border, #333);
+  }
+  .spec-doc :global(pre code) {
+    background: none;
+    padding: 0;
+  }
+  .spec-doc :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    display: block;
+    overflow-x: auto;
+    font-size: 0.92rem;
+  }
+  .spec-doc :global(th),
+  .spec-doc :global(td) {
+    border: 1px solid var(--border, #333);
+    padding: 0.5rem 0.7rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .spec-doc :global(th) {
+    background: var(--bg-tint, rgba(128, 128, 128, 0.12));
+  }
+</style>
