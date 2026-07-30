@@ -408,6 +408,17 @@ interface ApiIssue {
   pull_request?: unknown;
 }
 
+function toIssue(i: ApiIssue): Issue {
+  return {
+    title: i.title,
+    url: i.html_url,
+    number: i.number,
+    repo: i.repository_url.split("/").pop() || "",
+    labels: i.labels.map((l) => l.name),
+    createdAt: i.created_at,
+  };
+}
+
 async function fetchGoodFirstIssues(): Promise<Issue[]> {
   const q = encodeURIComponent(
     `org:${ORG} label:"good first issue" state:open is:issue`,
@@ -418,14 +429,7 @@ async function fetchGoodFirstIssues(): Promise<Issue[]> {
   if (!data?.items) return [];
   return data.items
     .filter((i) => !i.pull_request)
-    .map((i) => ({
-      title: i.title,
-      url: i.html_url,
-      number: i.number,
-      repo: i.repository_url.split("/").pop() || "",
-      labels: i.labels.map((l) => l.name),
-      createdAt: i.created_at,
-    }));
+    .map(toIssue);
 }
 
 // ── RFC feed ──────────────────────────────────────────────────────
@@ -455,14 +459,7 @@ async function fetchRfcIssues(): Promise<Issue[]> {
   if (!data?.items) return [];
   return data.items
     .filter((i) => !i.pull_request)
-    .map((i) => ({
-      title: i.title,
-      url: i.html_url,
-      number: i.number,
-      repo: i.repository_url.split("/").pop() || "",
-      labels: i.labels.map((l) => l.name),
-      createdAt: i.created_at,
-    }));
+    .map(toIssue);
 }
 
 interface ApiBoardFeature {
