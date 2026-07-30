@@ -525,7 +525,9 @@ export async function getRfc(): Promise<RfcFeed> {
     fetchDraftFeatures(),
   ]);
   const items = [...issues, ...drafts];
-  const areas = [...new Set(items.map((i) => i.area).filter(Boolean))].sort();
+  const areas = [...new Set(items.map((i) => i.area).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b),
+  );
   rfcCache = { items, areas };
   return rfcCache;
 }
