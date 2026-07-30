@@ -113,6 +113,71 @@ function resolveLink(docPath: string, href: string): string {
   return `${SPEC_RAW}/${target}`;
 }
 
+// ── Version train (from the board) ────────────────────────────────
+//
+// The spec's generated board (index.json) records, per feature, which versions
+// ship it and each version's status. Inverting that gives the semver train —
+// every version with the features it delivers — sourced from the spec itself.
+
+interface BoardFeature {
+  id: string;
+  title: string;
+  area: string;
+  tracks: string;
+  path: string;
+  versions?: { version: string; status: string }[];
+}
+
+export interface TrainFeature {
+  id: string;
+  title: string;
+  area: string;
+  slug: string;
+}
+
+export interface TrainVersion {
+  version: string;
+  epoch: string;
+  status: string;
+  features: TrainFeature[];
+}
+
+function cmpSemver(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+  }
+  return 0;
+}
+
+export async function specVersionTrain(): Promise<TrainVersion[]> {
+  const idx = await getJSON<{ features: BoardFeature[] }>(
+    `${SPEC_RAW}/10-functional/features/index.json`,
+  );
+  if (!idx?.features) return [];
+  const byVersion = new Map<string, TrainVersion>();
+  for (const f of idx.features) {
+    for (const v of f.versions ?? []) {
+      if (!byVersion.has(v.version)) {
+        byVersion.set(v.version, {
+          version: v.version,
+          epoch: f.tracks,
+          status: v.status,
+          features: [],
+        });
+      }
+      byVersion.get(v.version)!.features.push({
+        id: f.id,
+        title: f.title,
+        area: f.area,
+        slug: `10-functional/features/${f.path.replace(/\.md$/, "")}`,
+      });
+    }
+  }
+  return [...byVersion.values()].sort((a, b) => cmpSemver(a.version, b.version));
+}
+
 export interface RenderedDoc {
   title: string;
   html: string;
