@@ -115,9 +115,14 @@ function resolveLink(docPath: string, href: string): string {
 
 // ── Version train (from the board) ────────────────────────────────
 //
-// The spec's generated board (index.json) records, per feature, which versions
-// ship it and each version's status. Inverting that gives the semver train —
-// every version with the features it delivers — sourced from the spec itself.
+// The spec's generated board (index.json) carries a `versions` array — every
+// release the manifests declare, ordered by semver — and, per feature, which
+// versions ship it. The train is that version list, each carrying the features
+// it delivers. The list is authoritative rather than inverted from feature
+// membership, so the epoch-closing majors (1.0.0, 2.0.0) — which own no
+// per-feature goals — are present rather than dropped for having nothing to
+// point at them. A major stands for its whole epoch, so it carries every feature
+// that epoch ships; an ordinary version carries only what it itself delivers.
 
 interface BoardFeature {
   id: string;
@@ -126,6 +131,14 @@ interface BoardFeature {
   tracks: string;
   path: string;
   versions?: { version: string; status: string }[];
+}
+
+interface BoardVersion {
+  version: string;
+  epoch: string;
+  status: string;
+  closes_epoch: string | null;
+  goals: number;
 }
 
 export interface TrainFeature {
@@ -139,43 +152,48 @@ export interface TrainVersion {
   version: string;
   epoch: string;
   status: string;
+  // The epoch this version closes, if it is a major — its features are then the
+  // epoch's whole set rather than its own goal membership.
+  closesEpoch: string | null;
   features: TrainFeature[];
 }
 
-function cmpSemver(a: string, b: string): number {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
-  }
-  return 0;
-}
-
 export async function specVersionTrain(): Promise<TrainVersion[]> {
-  const idx = await getJSON<{ features: BoardFeature[] }>(
-    `${SPEC_RAW}/10-functional/features/index.json`,
-  );
-  if (!idx?.features) return [];
-  const byVersion = new Map<string, TrainVersion>();
+  const idx = await getJSON<{
+    versions?: BoardVersion[];
+    features?: BoardFeature[];
+  }>(`${SPEC_RAW}/10-functional/features/index.json`);
+  if (!idx?.versions || !idx?.features) return [];
+
+  const toFeature = (f: BoardFeature): TrainFeature => ({
+    id: f.id,
+    title: f.title,
+    area: f.area,
+    slug: `10-functional/features/${f.path.replace(/\.md$/, "")}`,
+  });
+
+  // Features by the version that ships them, and by the epoch they belong to —
+  // the latter for the majors, which own no per-feature goals of their own.
+  const byVersion = new Map<string, TrainFeature[]>();
+  const byEpoch = new Map<string, TrainFeature[]>();
   for (const f of idx.features) {
     for (const v of f.versions ?? []) {
-      if (!byVersion.has(v.version)) {
-        byVersion.set(v.version, {
-          version: v.version,
-          epoch: f.tracks,
-          status: v.status,
-          features: [],
-        });
-      }
-      byVersion.get(v.version)!.features.push({
-        id: f.id,
-        title: f.title,
-        area: f.area,
-        slug: `10-functional/features/${f.path.replace(/\.md$/, "")}`,
-      });
+      (byVersion.get(v.version) ?? byVersion.set(v.version, []).get(v.version)!).push(
+        toFeature(f),
+      );
     }
+    (byEpoch.get(f.tracks) ?? byEpoch.set(f.tracks, []).get(f.tracks)!).push(toFeature(f));
   }
-  return [...byVersion.values()].sort((a, b) => cmpSemver(a.version, b.version));
+
+  return idx.versions.map((v) => ({
+    version: v.version,
+    epoch: v.epoch,
+    status: v.status,
+    closesEpoch: v.closes_epoch ?? null,
+    features: v.closes_epoch
+      ? (byEpoch.get(v.closes_epoch) ?? [])
+      : (byVersion.get(v.version) ?? []),
+  }));
 }
 
 export interface TocEntry {

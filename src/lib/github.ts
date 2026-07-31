@@ -136,6 +136,29 @@ function creditOf(status: DeliverableStatus): number {
   return status === "done" ? 1 : status === "partial" ? PARTIAL_CREDIT : 0;
 }
 
+// Which epoch a milestone belongs to: v1 is the product (M0–M6), v2 the ecosystem
+// (M7 onward), mirroring the spec's roadmap. A decimal like "M0.5" parses to its
+// number, so it groups with M0.
+function epochOfMilestone(id: string): "v1" | "v2" {
+  return Number(id.replace(/^M/, "")) >= 7 ? "v2" : "v1";
+}
+
+// Implementation progress for one epoch: its milestones' deliverables, weighted
+// the same way (via creditOf) as the overall figure so the bars are comparable.
+// An epoch with nothing tracked yet — v2 today — is 0%, not a divide-by-zero.
+function epochProgress(
+  epoch: "v1" | "v2",
+  milestones: Milestone[],
+): { pct: number; done: number; total: number } {
+  const items = milestones
+    .filter((m) => epochOfMilestone(m.id) === epoch)
+    .flatMap((m) => m.deliverables.filter((d) => !d.group));
+  const total = items.length;
+  const doneUnits = items.reduce((n, d) => n + creditOf(d.status), 0);
+  const done = items.filter((d) => d.status === "done").length;
+  return { pct: total ? Math.round((doneUnits / total) * 100) : 0, done, total };
+}
+
 function rollup(deliverables: Deliverable[]): {
   done: number;
   total: number;
@@ -675,6 +698,10 @@ export async function getSiteData(): Promise<SiteData> {
       doneDeliverables,
       totalDeliverables,
       pct: Math.round((doneUnits / (totalDeliverables || 1)) * 100),
+      byEpoch: {
+        v1: epochProgress("v1", milestones),
+        v2: epochProgress("v2", milestones),
+      },
     },
   };
   return cached;
