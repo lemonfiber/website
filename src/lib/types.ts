@@ -90,5 +90,9 @@ export interface SiteData {
     doneDeliverables: number;
     totalDeliverables: number;
     pct: number;
+    // Implementation progress split by epoch — v1 (the product, M0–M6) and v2
+    // (the ecosystem, M7 onward), keyed by epoch id — so the roadmap can show a
+    // bar per major version rather than one blended figure.
+    byEpoch: Record<string, { pct: number; done: number; total: number }>;
   };
 }
