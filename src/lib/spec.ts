@@ -117,12 +117,11 @@ function resolveLink(docPath: string, href: string): string {
 //
 // The spec's generated board (index.json) carries a `versions` array — every
 // release the manifests declare, ordered by semver — and, per feature, which
-// versions ship it. The train is that version list, each carrying the features
-// it delivers. The list is authoritative rather than inverted from feature
-// membership, so the epoch-closing majors (1.0.0, 2.0.0) — which own no
-// per-feature goals — are present rather than dropped for having nothing to
-// point at them. A major stands for its whole epoch, so it carries every feature
-// that epoch ships; an ordinary version carries only what it itself delivers.
+// versions ship it. The train is that version list, each carrying the features it
+// delivers. The list is authoritative rather than inverted from feature
+// membership, so the epoch-closing majors (1.0.0, 2.0.0) are present rather than
+// dropped. Every version — majors included — carries only its own features: a
+// major's scope is its release (area L), not a summary of the minors before it.
 
 interface BoardFeature {
   id: string;
@@ -172,17 +171,16 @@ export async function specVersionTrain(): Promise<TrainVersion[]> {
     slug: `10-functional/features/${f.path.replace(/\.md$/, "")}`,
   });
 
-  // Features by the version that ships them, and by the epoch they belong to —
-  // the latter for the majors, which own no per-feature goals of their own.
+  // Which features each version ships, from their goal membership — the majors
+  // now own their release feature (area L), so they carry their own scope like any
+  // other version rather than aggregating the epoch.
   const byVersion = new Map<string, TrainFeature[]>();
-  const byEpoch = new Map<string, TrainFeature[]>();
   for (const f of idx.features) {
     for (const v of f.versions ?? []) {
       (byVersion.get(v.version) ?? byVersion.set(v.version, []).get(v.version)!).push(
         toFeature(f),
       );
     }
-    (byEpoch.get(f.tracks) ?? byEpoch.set(f.tracks, []).get(f.tracks)!).push(toFeature(f));
   }
 
   return idx.versions.map((v) => ({
@@ -190,9 +188,7 @@ export async function specVersionTrain(): Promise<TrainVersion[]> {
     epoch: v.epoch,
     status: v.status,
     closesEpoch: v.closes_epoch ?? null,
-    features: v.closes_epoch
-      ? (byEpoch.get(v.closes_epoch) ?? [])
-      : (byVersion.get(v.version) ?? []),
+    features: byVersion.get(v.version) ?? [],
   }));
 }
 
