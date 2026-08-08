@@ -241,7 +241,7 @@ export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
   const noFences = body.replace(/```[\s\S]*?```/g, "");
   const toc: TocEntry[] = [];
   const seen = new Set<string>();
-  for (const m of noFences.matchAll(/^(#{2,3})[ \t]+([^\n]{1,300}?)[ \t]*$/gm)) {
+  for (const m of noFences.matchAll(/^(#{2,3})([^\r\n]{1,300})$/gm)) {
     const text = m[2]
       .replaceAll(/\[([^\]]{1,200})\]\([^)]{0,500}\)/g, "$1")
       .replace(/[*`_]/g, "")
@@ -299,7 +299,8 @@ export interface FeatureDetail {
  */
 let workIndex: Map<string, FeatureWork[]> | null = null;
 
-const TRAILER = /^[ \t]*Spec:[ \t]*([^\n]{1,500})$/gim;
+// `Spec:` at the head of a line, the rest taken whole and split by the caller.
+const TRAILER = /^[ \t]{0,20}Spec:([^\r\n]{1,500})$/gim;
 const CITED = /\b([A-Z]{1,3}\d*)-R\d+\b/g;
 
 /** The features a pull request's `Spec:` trailers name. */
