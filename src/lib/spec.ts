@@ -48,7 +48,7 @@ interface TreeItem {
 function labelFor(path: string): string {
   const base = path.split("/").pop()!.replace(/\.md$/, "");
   if (base.toLowerCase() === "readme") {
-    const parent = path.split("/").slice(-2, -1)[0] || "";
+    const parent = path.split("/").at(-2) ?? "";
     return SECTIONS[parent] ? "Overview" : titleCase(parent);
   }
   return titleCase(base);
@@ -220,9 +220,15 @@ export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
   // Strip any YAML frontmatter — it is metadata, not prose.
   const raw = md.startsWith("---\n") ? md.slice(md.indexOf("\n---\n", 4) + 5) : md;
   const trimmed = raw.replace(/^\s+/, "");
-  const title = (trimmed.match(/^#\s+(.+)$/m)?.[1] ?? path).replace(/[*`]/g, "").trim();
+  // The whole heading line is taken and trimmed in code rather than matched with
+  // a leading `[ \t]+`: spaces and tabs are also "not a newline", so the two parts
+  // overlap and the engine has many ways to split the same whitespace — which is
+  // backtracking, and super-linear on a long line.
+  const title = (/^#([^\r\n]{1,300})$/m.exec(trimmed)?.[1] ?? path)
+    .replaceAll(/[*`]/g, "")
+    .trim();
   // Drop the leading H1 — it is shown as the page header already.
-  const body = trimmed.replace(/^#\s+.+\r?\n+/, "");
+  const body = trimmed.replace(/^#[^\r\n]*\r?\n+/, "");
   const rendered = await marked.parse(body, { async: true });
   const linked = rendered.replace(
     /href="([^"]+)"/g,
@@ -235,9 +241,9 @@ export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
   const noFences = body.replace(/```[\s\S]*?```/g, "");
   const toc: TocEntry[] = [];
   const seen = new Set<string>();
-  for (const m of noFences.matchAll(/^(#{2,3})\s+(.+?)\s*$/gm)) {
+  for (const m of noFences.matchAll(/^(#{2,3})([^\r\n]{1,300})$/gm)) {
     const text = m[2]
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replaceAll(/\[([^\]]{1,200})\]\([^)]{0,500}\)/g, "$1")
       .replace(/[*`_]/g, "")
       .trim();
     let id = slugify(text) || "section";
@@ -293,8 +299,18 @@ export interface FeatureDetail {
  */
 let workIndex: Map<string, FeatureWork[]> | null = null;
 
-const TRAILER = /^[ \t]*Spec:[ \t]*(.+)$/gim;
+// `Spec:` at the head of a line, the rest taken whole and split by the caller.
+const TRAILER = /^[ \t]{0,20}Spec:([^\r\n]{1,500})$/gim;
 const CITED = /\b([A-Z]{1,3}\d*)-R\d+\b/g;
+
+/** The features a pull request's `Spec:` trailers name. */
+function featuresCited(body: string | null): Set<string> {
+  const features = new Set<string>();
+  for (const [, trailer] of (body ?? "").matchAll(TRAILER)) {
+    for (const [, feature] of trailer.matchAll(CITED)) features.add(feature);
+  }
+  return features;
+}
 
 export async function featureWorkIndex(): Promise<Map<string, FeatureWork[]>> {
   if (workIndex) return workIndex;
@@ -312,11 +328,7 @@ export async function featureWorkIndex(): Promise<Map<string, FeatureWork[]>> {
       if (!pulls?.length) break;
 
       for (const pull of pulls) {
-        const features = new Set<string>();
-        for (const [, trailer] of (pull.body ?? "").matchAll(TRAILER)) {
-          for (const [, feature] of trailer.matchAll(CITED)) features.add(feature);
-        }
-        for (const feature of features) {
+        for (const feature of featuresCited(pull.body)) {
           const rows = index.get(feature) ?? [];
           rows.push({
             number: pull.number,
