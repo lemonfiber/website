@@ -252,3 +252,112 @@ export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
   });
   return { title, html, source: `${SPEC_BLOB}/${path}`, path, toc };
 }
+
+
+// ── One feature, and the work that built it ───────────────────────
+
+export interface FeatureWork {
+  number: number;
+  title: string;
+  url: string;
+  repo: string;
+  merged: boolean;
+  mergedAt: string | null;
+}
+
+export interface FeatureDetail {
+  id: string;
+  title: string;
+  area: string;
+  tracks: string;
+  slug: string;
+  milestones: string[];
+  versions: { version: string; status: string }[];
+  requires: string[];
+  relates: string[];
+  work: FeatureWork[];
+}
+
+/**
+ * Every pull request in the org, indexed by the features its `Spec:` trailer names.
+ *
+ * Built once and shared by every feature page. The obvious implementation — one
+ * search per feature — is both inaccurate and expensive: GitHub tokenises, so
+ * `D9-R` matches nothing while a bare `D9` matches anything mentioning it, and
+ * sixty-eight searches exhausts the unauthenticated rate limit long before the
+ * build finishes. Reading the pull requests once and parsing the trailer is
+ * exact and costs a handful of requests.
+ *
+ * The trailer is required on every change in this project, which is what makes
+ * the work findable by requirement at all.
+ */
+let workIndex: Map<string, FeatureWork[]> | null = null;
+
+const TRAILER = /^[ \t]*Spec:[ \t]*(.+)$/gim;
+const CITED = /\b([A-Z]{1,3}\d*)-R\d+\b/g;
+
+export async function featureWorkIndex(): Promise<Map<string, FeatureWork[]>> {
+  if (workIndex) return workIndex;
+  const index = new Map<string, FeatureWork[]>();
+
+  for (const repo of ["lemonfiber", "spec", "website", "media-stack"]) {
+    for (let page = 1; page <= 3; page += 1) {
+      const pulls = await getJSON<{
+        number: number;
+        title: string;
+        html_url: string;
+        body: string | null;
+        merged_at: string | null;
+      }[]>(`${API}/repos/${ORG}/${repo}/pulls?state=all&per_page=100&page=${page}`);
+      if (!pulls?.length) break;
+
+      for (const pull of pulls) {
+        const features = new Set<string>();
+        for (const [, trailer] of (pull.body ?? "").matchAll(TRAILER)) {
+          for (const [, feature] of trailer.matchAll(CITED)) features.add(feature);
+        }
+        for (const feature of features) {
+          const rows = index.get(feature) ?? [];
+          rows.push({
+            number: pull.number,
+            title: pull.title,
+            url: pull.html_url,
+            repo,
+            merged: Boolean(pull.merged_at),
+            mergedAt: pull.merged_at,
+          });
+          index.set(feature, rows);
+        }
+      }
+      if (pulls.length < 100) break;
+    }
+  }
+
+  for (const rows of index.values()) {
+    rows.sort((a, b) => b.number - a.number);
+  }
+  workIndex = index;
+  return index;
+}
+
+/** Every feature the board knows, with what shipped it and what it needs. */
+export async function specFeatures(): Promise<FeatureDetail[]> {
+  const idx = await getJSON<{ features?: (BoardFeature & {
+    milestones?: string[];
+    requires?: string[];
+    relates?: string[];
+  })[] }>(`${SPEC_RAW}/10-functional/features/index.json`);
+
+  return (idx?.features ?? []).map((f) => ({
+    id: f.id,
+    title: f.title,
+    area: f.area,
+    tracks: f.tracks,
+    slug: `10-functional/features/${f.path.replace(/\.md$/, "")}`,
+    milestones: f.milestones ?? [],
+    versions: f.versions ?? [],
+    requires: f.requires ?? [],
+    relates: f.relates ?? [],
+    work: [],
+  }));
+}

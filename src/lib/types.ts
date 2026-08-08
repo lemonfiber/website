@@ -73,6 +73,12 @@ export interface Release {
   assets?: ReleaseAsset[];
 }
 
+export interface FeatureProgress {
+  done: number;
+  total: number;
+  status: DeliverableStatus;
+}
+
 export interface SiteData {
   generatedAt: string;
   live: boolean; // true when GitHub was reachable at build time
@@ -84,6 +90,10 @@ export interface SiteData {
   // Newest published release across the org, for the install page's headline
   // version. Optional because a fresh org genuinely has none.
   latestRelease?: Release;
+  // How much of each feature is built, keyed by feature id — what lets the
+  // roadmap say which items of a version are finished rather than only which
+  // version they belong to.
+  features: Map<string, FeatureProgress>;
   progress: {
     doneMilestones: number;
     totalMilestones: number;

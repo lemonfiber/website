@@ -1,0 +1,194 @@
+---
+import Base from "../../layouts/Base.astro";
+import StatusPill from "../../components/StatusPill.astro";
+import { getSiteData } from "../../lib/github";
+import { specFeatures, featureWorkIndex } from "../../lib/spec";
+
+export async function getStaticPaths() {
+  const features = await specFeatures();
+  return features.map((f) => ({ params: { feature: f.id.toLowerCase() }, props: { feature: f } }));
+}
+
+const { feature } = Astro.props;
+const data = await getSiteData();
+
+// The work that cites this feature, from the `Spec:` trailer the project requires
+// on every change. The index is built once and shared by all sixty-eight pages.
+const work = (await featureWorkIndex()).get(feature.id) ?? [];
+const built = data.features.get(feature.id);
+const status = built?.status ?? "todo";
+const merged = work.filter((w) => w.merged);
+---
+
+<Base
+  active="roadmap"
+  stars={data.stars}
+  title={`${feature.id} — ${feature.title}`}
+  description={`${feature.title}: what it is, which release ships it, and the changes that built it.`}>
+  <section class="section head">
+    <div class="container">
+      <p class="eyebrow"><a href="/roadmap">Roadmap</a> · {feature.id}</p>
+      <h1 class="head__h">{feature.title}</h1>
+      <p class="head__sub">
+        <StatusPill status={status} />
+        {built && <span class="count">{built.done} of {built.total} requirements built</span>}
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid">
+      <div class="card">
+        <h2>Where it ships</h2>
+        {
+          feature.versions.length ? (
+            <ul class="plain">
+              {feature.versions.map((v) => (
+                <li>
+                  <code>{v.version}</code> <span class="muted">{v.status.replace("_", " ")}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="muted">Not scheduled into a version yet.</p>
+          )
+        }
+        {
+          feature.milestones.length > 0 && (
+            <p class="muted">
+              Milestone{feature.milestones.length > 1 ? "s" : ""}: {feature.milestones.join(", ")}
+            </p>
+          )
+        }
+      </div>
+
+      <div class="card">
+        <h2>What it needs</h2>
+        {
+          feature.requires.length ? (
+            <ul class="plain">
+              {feature.requires.map((r) => (
+                <li>
+                  <a href={`/roadmap/${r.toLowerCase()}`}>{r}</a>
+                  <span class="muted"> — cannot be built without</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="muted">Nothing. It can be built on its own.</p>
+          )
+        }
+        {
+          feature.relates.length > 0 && (
+            <p class="muted">
+              Related reading:{" "}
+              {feature.relates.map((r, i) => (
+                <>
+                  {i > 0 && ", "}
+                  <a href={`/roadmap/${r.toLowerCase()}`}>{r}</a>
+                </>
+              ))}
+            </p>
+          )
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2>The work</h2>
+      <p class="muted lede">
+        Every change that named <code>{feature.id}</code> in its <code>Spec:</code> trailer — the
+        project requires one on each pull request, which is what makes the work findable by
+        requirement rather than by remembering a branch name.
+      </p>
+      {
+        work.length ? (
+          <ul class="work">
+            {work.map((w) => (
+              <li class:list={["work__row", w.merged && "is-merged"]}>
+                <span class="work__mark" aria-hidden="true">{w.merged ? "●" : "○"}</span>
+                <a href={w.url} target="_blank" rel="noopener">
+                  {w.repo}#{w.number} — {w.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p class="muted">
+            No pull request has cited this yet. That is the honest answer for something not
+            started, and for something built before the trailer was required.
+          </p>
+        )
+      }
+      {work.length > 0 && (
+        <p class="muted">{merged.length} of {work.length} merged.</p>
+      )}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <p><a href={`/spec/${feature.slug}`}>Read the specification for {feature.id} →</a></p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .head__sub {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-top: 0.6rem;
+  }
+  .grid {
+    display: grid;
+    gap: 1.2rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 1.1rem 1.3rem;
+  }
+  .card h2 {
+    font-size: var(--size-h4);
+    margin: 0 0 0.6rem;
+  }
+  .plain {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .plain li {
+    padding: 0.15rem 0;
+  }
+  .muted {
+    color: var(--text-muted);
+  }
+  .lede {
+    max-width: 60ch;
+  }
+  .count {
+    font-size: var(--size-caption);
+    color: var(--text-muted);
+  }
+  .work {
+    list-style: none;
+    margin: 0.6rem 0;
+    padding: 0;
+  }
+  .work__row {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    padding: 0.25rem 0;
+  }
+  .work__mark {
+    color: var(--text-faint);
+  }
+  .work__row.is-merged .work__mark {
+    color: var(--ok);
+  }
+</style>
