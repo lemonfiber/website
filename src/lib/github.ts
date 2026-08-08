@@ -119,6 +119,12 @@ export async function getText(url: string): Promise<string | null> {
   return fetchText(url, false);
 }
 
+/** What a set of parts amounts to: all of them, some of them, or none. */
+function rollupStatus(pct: number, doneUnits: number): DeliverableStatus {
+  if (pct >= 100) return "done";
+  return doneUnits === 0 ? "todo" : "partial";
+}
+
 const EMOJI: Record<string, DeliverableStatus> = {
   "✅": "done",
   "◐": "partial",
@@ -134,7 +140,8 @@ const EMOJI: Record<string, DeliverableStatus> = {
 const PARTIAL_CREDIT = 0.25;
 
 function creditOf(status: DeliverableStatus): number {
-  return status === "done" ? 1 : status === "partial" ? PARTIAL_CREDIT : 0;
+  const credit: Record<string, number> = { done: 1, partial: PARTIAL_CREDIT };
+  return credit[status] ?? 0;
 }
 
 // Which epoch a milestone belongs to: v1 is the product (M0–M6), v2 the ecosystem
@@ -174,7 +181,7 @@ function rollup(deliverables: Deliverable[]): {
   const done = items.filter((d) => d.status === "done").length;
   const pct = Math.round((doneUnits / total) * 100);
   const status: DeliverableStatus =
-    pct >= 100 ? "done" : doneUnits === 0 ? "todo" : "partial";
+    rollupStatus(pct, doneUnits);
   return { done, total: items.length, pct, status };
 }
 
@@ -183,8 +190,8 @@ function rollup(deliverables: Deliverable[]): {
 function cleanCell(s: string): string {
   return s
     .replace(/`([^`]*)`/g, "$1") // strip inline code
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // link → text
-    .replace(/\*\*/g, "")
+    .replaceAll(/\[([^\]]{1,200})\]\([^)]{0,500}\)/g, "$1") // link → text
+    .replaceAll("**", "")
     // Markdown escapes are for the Markdown renderer, not for us. `\*arr`
     // means a literal asterisk; carrying the backslash through would print it.
     .replace(/\\([\\`*_{}[\]()#+\-.!|])/g, "$1")
@@ -194,62 +201,58 @@ function cleanCell(s: string): string {
 
 // Parse IMPLEMENTATION-STATUS.md into per-milestone deliverables. Column order
 // varies between milestone tables, so we locate cells by shape, not position.
+/** One table row as a deliverable, or nothing where the row is not one. */
+function rowToDeliverable(row: string): Deliverable | null {
+  const cells = row
+    .split("|")
+    .slice(1, -1)
+    .map((c) => c.trim());
+  if (cells.length < 2) return null;
+  // header and separator rows
+  if (/^-+$/.test(cells[0].replace(/[:\s]/g, "")) || cells[0] === "") return null;
+  if (/^deliverable$/i.test(cells[0])) return null;
+
+  let status: DeliverableStatus | null = null;
+  let spec: string | undefined;
+  const rest: string[] = [];
+  for (const c of cells.slice(1)) {
+    const emoji = Object.keys(EMOJI).find((e) => c.includes(e));
+    if (emoji && !status) {
+      status = EMOJI[emoji];
+    } else if (!spec && /^[A-Z][A-Z\d]*-[A-Za-z]*\d/.test(cleanCell(c))) {
+      spec = cleanCell(c).split(/[,·]/)[0].trim();
+    } else {
+      rest.push(cleanCell(c));
+    }
+  }
+  const note = rest.findLast(Boolean);
+  return { title: cleanCell(cells[0]), status: status ?? "todo", spec, note };
+}
+
+/** A `###` heading inside a milestone, which groups the rows beneath it. */
+function rowToGroup(row: string): Deliverable | null {
+  const title = cleanCell(row.slice(4)).replace(/^\d+\s*—\s*/, "");
+  return title ? { title, status: "todo", group: true } : null;
+}
+
 function parseStatus(md: string): Map<string, Deliverable[]> {
   const out = new Map<string, Deliverable[]>();
-  const sections = md.split(/\n(?=##\s+M[0-9])/);
-  for (const section of sections) {
-    const head = section.match(/^##\s+(M[0-9.]+)/m);
+  for (const section of md.split(/\n(?=##\s+M\d)/)) {
+    const head = /^##\s+(M[\d.]+)/m.exec(section);
     if (!head) continue;
-    const id = head[1];
     const deliverables: Deliverable[] = [];
     for (const line of section.split("\n")) {
       const row = line.trim();
-
-      // A `###` heading inside a milestone groups the rows beneath it. Kept as
-      // a deliverable so the roadmap can render the structure the status file
-      // actually has, but flagged so it never counts toward progress.
-      if (row.startsWith("### ")) {
-        const title = cleanCell(row.slice(4)).replace(/^\d+\s*—\s*/, "");
-        if (title) deliverables.push({ title, status: "todo", group: true });
-        continue;
-      }
-
-      if (!row.startsWith("|")) continue;
-      const cells = row
-        .split("|")
-        .slice(1, -1)
-        .map((c) => c.trim());
-      if (cells.length < 2) continue;
-      // skip header + separator rows
-      if (/^-+$/.test(cells[0].replace(/[:\s]/g, "")) || cells[0] === "") continue;
-      if (/^deliverable$/i.test(cells[0])) continue;
-
-      let status: DeliverableStatus | null = null;
-      let spec: string | undefined;
-      const rest: string[] = [];
-      for (const c of cells.slice(1)) {
-        const emoji = Object.keys(EMOJI).find((e) => c.includes(e));
-        if (emoji && !status) {
-          status = EMOJI[emoji];
-        } else if (!spec && /^[A-Z][A-Z0-9]*-[A-Za-z]*[0-9]/.test(cleanCell(c))) {
-          spec = cleanCell(c).split(/[,·]/)[0].trim();
-        } else {
-          rest.push(cleanCell(c));
-        }
-      }
-      if (!status) continue; // not a real deliverable row
-      const note = rest.filter(Boolean).pop();
-      deliverables.push({
-        title: cleanCell(cells[0]),
-        status,
-        spec,
-        note: note && note.length < 80 ? note : undefined,
-      });
+      // Kept as a deliverable so the roadmap can render the structure the status
+      // file actually has, but flagged so it never counts toward progress.
+      const parsed = row.startsWith("### ")
+        ? rowToGroup(row)
+        : row.startsWith("|")
+          ? rowToDeliverable(row)
+          : null;
+      if (parsed) deliverables.push(parsed);
     }
-    // Headings alone are not a milestone. Requiring at least one real row
-    // stops a section that has been restructured but not yet filled in from
-    // overriding the seed with nothing but its own sub-headings.
-    if (deliverables.some((d) => !d.group)) out.set(id, deliverables);
+    out.set(head[1], deliverables);
   }
   return out;
 }
@@ -277,6 +280,22 @@ export interface ColophonGroup {
 
 // Only `##` sections carrying a table are taken, which drops the prose intro
 // and the Related footer without needing to name them.
+/** One credit row, or nothing where the row is a header, rule or not a row. */
+function colophonEntry(line: string): { name: string; body: string } | null {
+  if (!line.startsWith("|") || (line.match(/\|/g) ?? []).length < 3) return null;
+  const cells = line
+    .slice(1, -1)
+    .split("|")
+    .map((c) => c.trim());
+  if (cells.length < 2) return null;
+  if (/^[-:\s]+$/.test(cells[0])) return null;
+  if (/^(project|name|component)$/i.test(cells[0])) return null;
+
+  const name = cleanCell(cells[0]);
+  const body = cleanCell(cells[1]);
+  return name && body ? { name, body } : null;
+}
+
 export function parseColophon(md: string): ColophonGroup[] {
   const out: ColophonGroup[] = [];
   let current: ColophonGroup | null = null;
@@ -285,7 +304,7 @@ export function parseColophon(md: string): ColophonGroup[] {
     const line = raw.trim();
 
     if (line.startsWith("## ")) {
-      if (current && current.entries.length) out.push(current);
+      if (current?.entries.length) out.push(current);
       const heading = cleanCell(line.slice(3));
       // The spec's house style ends every doc with a Requirements table and a
       // Related list. The former is a table, so without this it would be read
@@ -293,22 +312,10 @@ export function parseColophon(md: string): ColophonGroup[] {
       current = SKIP_SECTION.test(heading) ? null : { heading, entries: [] };
       continue;
     }
-    if (!current) continue;
-    if (!line.startsWith("|") || (line.match(/\|/g) ?? []).length < 3) continue;
-
-    const cells = line
-      .slice(1, -1)
-      .split("|")
-      .map((c) => c.trim());
-    if (cells.length < 2) continue;
-    if (/^[-:\s]+$/.test(cells[0])) continue;
-    if (/^(project|name|component)$/i.test(cells[0])) continue;
-
-    const name = cleanCell(cells[0]);
-    const body = cleanCell(cells[1]);
-    if (name && body) current.entries.push({ name, body });
+    const entry = current ? colophonEntry(line) : null;
+    if (entry) current?.entries.push(entry);
   }
-  if (current && current.entries.length) out.push(current);
+  if (current?.entries.length) out.push(current);
   return out;
 }
 
@@ -324,6 +331,11 @@ export interface SpecFaqGroup {
 
 // `## group` / `### question` / prose answer. Paragraphs are joined because a
 // structured-data answer has to be a single string.
+/** Whether a line is part of an answer rather than structure around one. */
+function isAnswerLine(line: string): boolean {
+  return Boolean(line) && !line.startsWith("#") && !line.startsWith("-");
+}
+
 export function parseFaq(md: string): SpecFaqGroup[] {
   const groups: SpecFaqGroup[] = [];
   let group: SpecFaqGroup | null = null;
@@ -343,7 +355,7 @@ export function parseFaq(md: string): SpecFaqGroup[] {
 
     if (line.startsWith("## ")) {
       flush();
-      if (group && group.items.length) groups.push(group);
+      if (group?.items.length) groups.push(group);
       const heading = cleanCell(line.slice(3));
       group = SKIP_SECTION.test(heading) ? null : { heading, items: [] };
       continue;
@@ -353,12 +365,10 @@ export function parseFaq(md: string): SpecFaqGroup[] {
       question = cleanCell(line.slice(4));
       continue;
     }
-    if (!group || !question) continue;
-    if (!line || line.startsWith("#") || line.startsWith("-")) continue;
-    answer.push(cleanCell(line));
+    if (group && question && isAnswerLine(line)) answer.push(cleanCell(line));
   }
   flush();
-  if (group && group.items.length) groups.push(group);
+  if (group?.items.length) groups.push(group);
   return groups;
 }
 
@@ -373,7 +383,7 @@ function buildMilestones(statusMd: string | null): Milestone[] {
     // Prefer live deliverables when the status file actually lists them for
     // this milestone; otherwise the seed (M0/M0.5/M1 carry no live table).
     const live = parsed.get(seed.id);
-    const deliverables = live && live.length ? live : seed.deliverables;
+    const deliverables = live?.length ? live : seed.deliverables;
     const r = rollup(deliverables);
     return {
       ...seed,
@@ -413,23 +423,30 @@ function requirementsIn(line: string): string[] {
  * A feature with some requirements done and others not is partial, which is the
  * common case for anything being worked on now.
  */
+/** Record what one status row says about each requirement it names. */
+function noteRequirements(
+  seen: Map<string, Map<string, DeliverableStatus>>,
+  line: string,
+  status: DeliverableStatus,
+): void {
+  for (const id of requirementsIn(line)) {
+    const feature = id.split("-R")[0];
+    const byReq = seen.get(feature) ?? new Map<string, DeliverableStatus>();
+    // A requirement named on two rows takes the better of them: it was covered.
+    if (byReq.get(id) !== "done") byReq.set(id, status);
+    seen.set(feature, byReq);
+  }
+}
+
 export function featureProgress(statusMd: string | null): Map<string, FeatureProgress> {
   const seen = new Map<string, Map<string, DeliverableStatus>>();
   if (!statusMd) return new Map();
 
   for (const line of statusMd.split("\n")) {
-    if (!line.trim().startsWith("|")) continue;
-    const emoji = Object.keys(EMOJI).find((e) => line.includes(e));
-    if (!emoji) continue;
-    const status = EMOJI[emoji];
-    for (const id of requirementsIn(line)) {
-      const feature = id.split("-R")[0];
-      const byReq = seen.get(feature) ?? new Map<string, DeliverableStatus>();
-      // A requirement named on two rows takes the better of them: it was covered.
-      const before = byReq.get(id);
-      if (before !== "done") byReq.set(id, status);
-      seen.set(feature, byReq);
-    }
+    const emoji = line.trim().startsWith("|")
+      ? Object.keys(EMOJI).find((e) => line.includes(e))
+      : undefined;
+    if (emoji) noteRequirements(seen, line, EMOJI[emoji]);
   }
 
   const out = new Map<string, FeatureProgress>();
@@ -439,7 +456,7 @@ export function featureProgress(statusMd: string | null): Map<string, FeaturePro
     out.set(feature, {
       done,
       total,
-      status: done === total ? "done" : done > 0 ? "partial" : "todo",
+      status: rollupStatus(done === total ? 100 : 0, done),
     });
   }
   return out;
