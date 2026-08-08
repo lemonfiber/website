@@ -12,10 +12,18 @@ const train = await specVersionTrain();
 
 // The train, split into its two epochs — each a major-version arc with its own
 // progress. "Built" is implementation (the same signal as the milestone bars,
-// scoped to the epoch); "Shipped" is release progress (released full, staged
-// half, planned none). Only epochs that actually have versions are shown.
-const releaseWeight = (status: string) =>
-  status === "released" ? 1 : status === "staged" ? 0.5 : 0;
+// scoped to the epoch); "Shipped" is release progress. A version counts fully
+// once released, and partly on the way there — staged means its goals are locked,
+// in_progress means someone is building it, releasable means it is waiting on a
+// tag. Weighting them apart is what lets the bar move while a version is being
+// worked on rather than jumping only when one ships.
+const RELEASE_WEIGHT: Record<string, number> = {
+  released: 1,
+  releasable: 0.9,
+  in_progress: 0.5,
+  staged: 0.25,
+};
+const releaseWeight = (status: string) => RELEASE_WEIGHT[status] ?? 0;
 
 const epochs = [
   { id: "v1", label: "v1 — the product", areas: "areas A–G", major: "1.0.0" },
@@ -115,7 +123,9 @@ const epochs = [
                     <summary class="ver__sum">
                       <code class="ver__num">{v.version}</code>
                       {v.closesEpoch && <span class="ver__closes">epoch complete</span>}
-                      <span class:list={["ver__pill", `is-${v.status}`]}>{v.status}</span>
+                      <span class:list={["ver__pill", `is-${v.status}`]}>
+                        {v.status === "in_progress" ? "in progress" : v.status}
+                      </span>
                       <span class="ver__count">{v.features.length} features</span>
                     </summary>
                     <ul class="ver__feats">
@@ -371,6 +381,18 @@ const epochs = [
   .ver__pill.is-staged {
     color: var(--accent-strong);
     background: var(--wip-bg);
+  }
+  /* The one being built right now — the loudest thing on the page after what has
+     already shipped, because it is the question most people arrive with. */
+  .ver__pill.is-in_progress {
+    color: var(--accent-strong);
+    background: var(--wip-bg);
+    border: 1px solid currentColor;
+  }
+  .ver__pill.is-releasable {
+    color: var(--ok);
+    background: var(--ok-bg);
+    border: 1px dashed currentColor;
   }
   .ver__pill.is-planned {
     color: var(--text-muted);
