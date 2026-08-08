@@ -574,8 +574,11 @@ export interface RfcFeed {
 }
 
 function areaFromBody(body: string | undefined): string {
-  const m = (body ?? "").match(/###\s+Area\s*\n+\s*([A-K])\b/);
-  return m ? m[1] : "";
+  // The whitespace between the heading and the letter is matched once, as one
+  // run, rather than as three adjacent classes that each accept whitespace and
+  // so can divide it between them in many ways.
+  const found = /###[ \t]{1,20}Area\s{1,100}([A-K])\b/.exec(body ?? "");
+  return found ? found[1] : "";
 }
 
 async function fetchRfcIssues(): Promise<RfcItem[]> {

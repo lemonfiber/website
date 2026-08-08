@@ -312,37 +312,46 @@ function featuresCited(body: string | null): Set<string> {
   return features;
 }
 
-export async function featureWorkIndex(): Promise<Map<string, FeatureWork[]>> {
-  if (workIndex) return workIndex;
-  const index = new Map<string, FeatureWork[]>();
+interface ApiPull {
+  number: number;
+  title: string;
+  html_url: string;
+  body: string | null;
+  merged_at: string | null;
+}
 
-  for (const repo of ["lemonfiber", "spec", "website", "media-stack"]) {
-    for (let page = 1; page <= 3; page += 1) {
-      const pulls = await getJSON<{
-        number: number;
-        title: string;
-        html_url: string;
-        body: string | null;
-        merged_at: string | null;
-      }[]>(`${API}/repos/${ORG}/${repo}/pulls?state=all&per_page=100&page=${page}`);
-      if (!pulls?.length) break;
-
-      for (const pull of pulls) {
-        for (const feature of featuresCited(pull.body)) {
-          const rows = index.get(feature) ?? [];
-          rows.push({
+/** Read one repository's pull requests into the index, a page at a time. */
+async function indexRepo(repo: string, index: Map<string, FeatureWork[]>): Promise<void> {
+  for (let page = 1; page <= 3; page += 1) {
+    const pulls = await getJSON<ApiPull[]>(
+      `${API}/repos/${ORG}/${repo}/pulls?state=all&per_page=100&page=${page}`,
+    );
+    if (!pulls?.length) return;
+    for (const pull of pulls) {
+      for (const feature of featuresCited(pull.body)) {
+        index.set(feature, [
+          ...(index.get(feature) ?? []),
+          {
             number: pull.number,
             title: pull.title,
             url: pull.html_url,
             repo,
             merged: Boolean(pull.merged_at),
             mergedAt: pull.merged_at,
-          });
-          index.set(feature, rows);
-        }
+          },
+        ]);
       }
-      if (pulls.length < 100) break;
     }
+    if (pulls.length < 100) return;
+  }
+}
+
+export async function featureWorkIndex(): Promise<Map<string, FeatureWork[]>> {
+  if (workIndex) return workIndex;
+  const index = new Map<string, FeatureWork[]>();
+
+  for (const repo of ["lemonfiber", "spec", "website", "media-stack"]) {
+    await indexRepo(repo, index);
   }
 
   for (const rows of index.values()) {
