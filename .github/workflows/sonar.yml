@@ -1,0 +1,26 @@
+# The zero-new-issues standard (Q-R63/R64), enforced here as in every other repo.
+#
+# There is no scan job: this repository is analysed by SonarCloud's Automatic
+# Analysis, which posts the same summary comment a CI-driven scan would. The
+# shared gate reads that comment and fails on any new issue, so the standard is
+# enforced identically whichever way the analysis was produced.
+#
+# Without this the repository had SonarCloud's own quality gate and nothing else
+# — and that gate passes with new issues on it, which is the whole reason
+# `Q-R64` exists.
+name: sonar
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: lemonfiber/spec/.github/workflows/sonar-gate.yml@355b391c5f4673f28dcbc2999d7a96c160786581 # main
+    secrets:
+      sonar-token: ${{ secrets.SONAR_TOKEN }}
