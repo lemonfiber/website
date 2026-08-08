@@ -220,11 +220,15 @@ export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
   // Strip any YAML frontmatter — it is metadata, not prose.
   const raw = md.startsWith("---\n") ? md.slice(md.indexOf("\n---\n", 4) + 5) : md;
   const trimmed = raw.replace(/^\s+/, "");
-  const title = (/^#[ \t]+(.{1,300})$/m.exec(trimmed)?.[1] ?? path)
+  // The whole heading line is taken and trimmed in code rather than matched with
+  // a leading `[ \t]+`: spaces and tabs are also "not a newline", so the two parts
+  // overlap and the engine has many ways to split the same whitespace — which is
+  // backtracking, and super-linear on a long line.
+  const title = (/^#([^\r\n]{1,300})$/m.exec(trimmed)?.[1] ?? path)
     .replaceAll(/[*`]/g, "")
     .trim();
   // Drop the leading H1 — it is shown as the page header already.
-  const body = trimmed.replace(/^#[ \t]+[^\r\n]*\r?\n+/, "");
+  const body = trimmed.replace(/^#[^\r\n]*\r?\n+/, "");
   const rendered = await marked.parse(body, { async: true });
   const linked = rendered.replace(
     /href="([^"]+)"/g,
