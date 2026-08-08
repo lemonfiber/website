@@ -224,7 +224,7 @@ export async function renderSpecDoc(path: string): Promise<RenderedDoc | null> {
     .replaceAll(/[*`]/g, "")
     .trim();
   // Drop the leading H1 — it is shown as the page header already.
-  const body = trimmed.replace(/^#[ \t]+[^\n]*\r?\n+/, "");
+  const body = trimmed.replace(/^#[ \t]+[^\r\n]*\r?\n+/, "");
   const rendered = await marked.parse(body, { async: true });
   const linked = rendered.replace(
     /href="([^"]+)"/g,

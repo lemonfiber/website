@@ -235,6 +235,18 @@ function rowToGroup(row: string): Deliverable | null {
   return title ? { title, status: "todo", group: true } : null;
 }
 
+/** One line of a milestone section, whichever of the two shapes it is.
+ *
+ * A `###` heading is kept as a deliverable so the roadmap can render the
+ * structure the status file actually has, flagged so it never counts toward
+ * progress. Anything that is not a heading or a table row is neither.
+ */
+function parseRow(row: string): Deliverable | null {
+  if (row.startsWith("### ")) return rowToGroup(row);
+  if (row.startsWith("|")) return rowToDeliverable(row);
+  return null;
+}
+
 function parseStatus(md: string): Map<string, Deliverable[]> {
   const out = new Map<string, Deliverable[]>();
   for (const section of md.split(/\n(?=##\s+M\d)/)) {
@@ -243,13 +255,7 @@ function parseStatus(md: string): Map<string, Deliverable[]> {
     const deliverables: Deliverable[] = [];
     for (const line of section.split("\n")) {
       const row = line.trim();
-      // Kept as a deliverable so the roadmap can render the structure the status
-      // file actually has, but flagged so it never counts toward progress.
-      const parsed = row.startsWith("### ")
-        ? rowToGroup(row)
-        : row.startsWith("|")
-          ? rowToDeliverable(row)
-          : null;
+      const parsed = parseRow(row);
       if (parsed) deliverables.push(parsed);
     }
     out.set(head[1], deliverables);
