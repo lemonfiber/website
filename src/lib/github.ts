@@ -10,6 +10,7 @@
 import type {
   Deliverable,
   DeliverableStatus,
+  FeatureProgress,
   Issue,
   Milestone,
   Release,
@@ -385,6 +386,65 @@ function buildMilestones(statusMd: string | null): Milestone[] {
   });
 }
 
+
+// ── Per-feature build status ──────────────────────────────────────
+
+const REQ = /\b([A-Z]{1,3}\d*)-R(\d+)\b/g;
+const RANGE = /\b([A-Z]{1,3}\d*)-R(\d+)\.\.(?:[A-Z]{1,3}\d*-)?R?(\d+)\b/g;
+
+/** Every requirement id a status row names, expanding `C9-R1..R6` into its members. */
+function requirementsIn(line: string): string[] {
+  const ids = new Set<string>();
+  for (const [, feature, lo, hi] of line.matchAll(RANGE)) {
+    for (let n = Number(lo); n <= Number(hi); n += 1) ids.add(`${feature}-R${n}`);
+  }
+  for (const [id] of line.matchAll(REQ)) ids.add(id);
+  return [...ids];
+}
+
+/**
+ * What is built, per feature, read from the implementation status file.
+ *
+ * The file is the project's own record — a row per deliverable, marked done,
+ * partial or not started, naming the requirements it covers. Rolling those up by
+ * feature is what lets the roadmap say which items of a version are finished
+ * rather than only which version they belong to.
+ *
+ * A feature with some requirements done and others not is partial, which is the
+ * common case for anything being worked on now.
+ */
+export function featureProgress(statusMd: string | null): Map<string, FeatureProgress> {
+  const seen = new Map<string, Map<string, DeliverableStatus>>();
+  if (!statusMd) return new Map();
+
+  for (const line of statusMd.split("\n")) {
+    if (!line.trim().startsWith("|")) continue;
+    const emoji = Object.keys(EMOJI).find((e) => line.includes(e));
+    if (!emoji) continue;
+    const status = EMOJI[emoji];
+    for (const id of requirementsIn(line)) {
+      const feature = id.split("-R")[0];
+      const byReq = seen.get(feature) ?? new Map<string, DeliverableStatus>();
+      // A requirement named on two rows takes the better of them: it was covered.
+      const before = byReq.get(id);
+      if (before !== "done") byReq.set(id, status);
+      seen.set(feature, byReq);
+    }
+  }
+
+  const out = new Map<string, FeatureProgress>();
+  for (const [feature, byReq] of seen) {
+    const total = byReq.size;
+    const done = [...byReq.values()].filter((s) => s === "done").length;
+    out.set(feature, {
+      done,
+      total,
+      status: done === total ? "done" : done > 0 ? "partial" : "todo",
+    });
+  }
+  return out;
+}
+
 // ── GitHub API ────────────────────────────────────────────────────
 
 interface ApiRepo {
@@ -650,6 +710,7 @@ export async function getSiteData(): Promise<SiteData> {
   const stars = repoResult?.stars ?? 0;
 
   const milestones = buildMilestones(statusMd);
+  const features = featureProgress(statusMd);
 
   // Only hit the search + releases APIs when the org was reachable at all.
   const [goodFirstIssues, liveReleases] = live
@@ -692,6 +753,7 @@ export async function getSiteData(): Promise<SiteData> {
     goodFirstIssues,
     releases,
     latestRelease: releases[0],
+    features,
     progress: {
       doneMilestones: milestones.filter((m) => m.status === "done").length,
       totalMilestones: milestones.length,

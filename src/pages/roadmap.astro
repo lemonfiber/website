@@ -129,14 +129,26 @@ const epochs = [
                       <span class="ver__count">{v.features.length} features</span>
                     </summary>
                     <ul class="ver__feats">
-                      {v.features.map((f) => (
-                        <li>
-                          <a href={`/spec/${f.slug}`}>
-                            <code class="ver__fid">{f.id}</code>
-                            <span>{f.title}</span>
-                          </a>
-                        </li>
-                      ))}
+                      {v.features.map((f) => {
+                        const built = data.features.get(f.id);
+                        const state = built?.status ?? "todo";
+                        return (
+                          <li>
+                            <a href={`/roadmap/${f.id.toLowerCase()}`}>
+                              <span class:list={["feat__mark", `is-${state}`]} aria-hidden="true">
+                                {statusGlyph(state)}
+                              </span>
+                              <code class="ver__fid">{f.id}</code>
+                              <span>{f.title}</span>
+                              {built && (
+                                <span class="feat__count">
+                                  {built.done}/{built.total}
+                                </span>
+                              )}
+                            </a>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </details>
                 ))}
@@ -403,6 +415,23 @@ const epochs = [
     font-size: 0.82rem;
     color: var(--text-faint);
     font-family: var(--font-mono);
+  }
+  /* Built, being built, not started — the same three the milestone list uses, so
+     one glance reads the same way in both places. */
+  .feat__mark.is-done {
+    color: var(--ok);
+  }
+  .feat__mark.is-partial {
+    color: var(--accent-strong);
+  }
+  .feat__mark.is-todo {
+    color: var(--text-faint);
+  }
+  .feat__count {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
   }
   .ver__feats {
     list-style: none;
